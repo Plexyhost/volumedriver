@@ -30,7 +30,7 @@ type volumeInfo struct {
 	cancel   context.CancelFunc
 }
 
-type nfsVolumeDriver struct {
+type plexVolumeDriver struct {
 	Volumes        map[string]*volumeInfo
 	mutex          *sync.RWMutex
 	endpoint       string
@@ -39,7 +39,7 @@ type nfsVolumeDriver struct {
 	volumeInfoPath string
 }
 
-func (d *nfsVolumeDriver) saveVolumes() error {
+func (d *plexVolumeDriver) saveVolumes() error {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -52,7 +52,7 @@ func (d *nfsVolumeDriver) saveVolumes() error {
 	return json.NewEncoder(file).Encode(d.Volumes)
 }
 
-func (d *nfsVolumeDriver) loadVolumes() error {
+func (d *plexVolumeDriver) loadVolumes() error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -80,9 +80,9 @@ func (d *nfsVolumeDriver) loadVolumes() error {
 	return nil
 }
 
-func NewNFSVolumeDriver(endpoint string, store storage.StorageProvider) *nfsVolumeDriver {
+func NewPlexVolumeDriver(endpoint string, store storage.StorageProvider) *plexVolumeDriver {
 
-	driver := &nfsVolumeDriver{
+	driver := &plexVolumeDriver{
 		Volumes:        make(map[string]*volumeInfo),
 		mutex:          &sync.RWMutex{},
 		endpoint:       endpoint,
@@ -97,7 +97,7 @@ func NewNFSVolumeDriver(endpoint string, store storage.StorageProvider) *nfsVolu
 }
 
 // req.Name __has__ to be the server's id.
-func (d *nfsVolumeDriver) Create(req *volume.CreateRequest) error {
+func (d *plexVolumeDriver) Create(req *volume.CreateRequest) error {
 
 	logrus.WithField("name", req.Name).Info("Creating volume")
 
@@ -134,7 +134,7 @@ func (d *nfsVolumeDriver) Create(req *volume.CreateRequest) error {
 }
 
 // TODO: Alt det her skal rykkes til unmount.
-func (d *nfsVolumeDriver) Remove(req *volume.RemoveRequest) error {
+func (d *plexVolumeDriver) Remove(req *volume.RemoveRequest) error {
 
 	v, exists := d.Volumes[req.Name]
 	if !exists {
@@ -165,7 +165,7 @@ func (d *nfsVolumeDriver) Remove(req *volume.RemoveRequest) error {
 	return nil
 }
 
-func (d *nfsVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, error) {
+func (d *plexVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -177,7 +177,7 @@ func (d *nfsVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, e
 	return &volume.PathResponse{Mountpoint: v.Mountpoint}, nil
 }
 
-func (d *nfsVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse, error) {
+func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse, error) {
 	logrus.WithField("name", req.Name).Info("mounting driver")
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
@@ -193,7 +193,7 @@ func (d *nfsVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse
 	return &volume.MountResponse{Mountpoint: v.Mountpoint}, nil
 }
 
-func (d *nfsVolumeDriver) Unmount(req *volume.UnmountRequest) error {
+func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -207,7 +207,7 @@ func (d *nfsVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 	return nil
 }
 
-func (d *nfsVolumeDriver) Get(req *volume.GetRequest) (*volume.GetResponse, error) {
+func (d *plexVolumeDriver) Get(req *volume.GetRequest) (*volume.GetResponse, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -224,7 +224,7 @@ func (d *nfsVolumeDriver) Get(req *volume.GetRequest) (*volume.GetResponse, erro
 	}, nil
 }
 
-func (d *nfsVolumeDriver) List() (*volume.ListResponse, error) {
+func (d *plexVolumeDriver) List() (*volume.ListResponse, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -238,13 +238,13 @@ func (d *nfsVolumeDriver) List() (*volume.ListResponse, error) {
 	return &volume.ListResponse{Volumes: vols}, nil
 }
 
-func (d *nfsVolumeDriver) Capabilities() *volume.CapabilitiesResponse {
+func (d *plexVolumeDriver) Capabilities() *volume.CapabilitiesResponse {
 	return &volume.CapabilitiesResponse{
 		Capabilities: volume.Capability{Scope: "local"},
 	}
 }
 
-func (d *nfsVolumeDriver) startPeriodicSave(ctx context.Context, volumeName string) {
+func (d *plexVolumeDriver) startPeriodicSave(ctx context.Context, volumeName string) {
 	ticker := time.NewTicker(d.syncPeriod)
 	defer ticker.Stop()
 
@@ -270,7 +270,7 @@ func (d *nfsVolumeDriver) startPeriodicSave(ctx context.Context, volumeName stri
 	}
 }
 
-func (d *nfsVolumeDriver) saveToStore(vol *volumeInfo) error {
+func (d *plexVolumeDriver) saveToStore(vol *volumeInfo) error {
 	var buf bytes.Buffer
 
 	err := cmp.Compress(vol.Mountpoint, &buf)
@@ -283,7 +283,7 @@ func (d *nfsVolumeDriver) saveToStore(vol *volumeInfo) error {
 	return d.store.Store(vol.ServerID, &buf)
 }
 
-func (d *nfsVolumeDriver) loadFromStore(vol *volumeInfo) error {
+func (d *plexVolumeDriver) loadFromStore(vol *volumeInfo) error {
 	var buf bytes.Buffer
 
 	err := d.store.Retrieve(vol.ServerID, &buf)
