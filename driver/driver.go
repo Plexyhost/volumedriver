@@ -67,6 +67,7 @@ func (d *nfsVolumeDriver) loadVolumes() error {
 }
 
 func NewNFSVolumeDriver(endpoint string, store storage.StorageProvider) *nfsVolumeDriver {
+
 	driver := &nfsVolumeDriver{
 		volumes:    make(map[string]*volumeInfo),
 		mutex:      &sync.RWMutex{},
@@ -86,6 +87,7 @@ func (d *nfsVolumeDriver) Create(req *volume.CreateRequest) error {
 	logrus.WithField("name", req.Name).Info("Creating volume")
 
 	mountpoint := filepath.Join(d.endpoint, req.Name)
+	fmt.Printf("mountpoint: %v\n", mountpoint)
 	if err := os.MkdirAll(mountpoint, 0755); err != nil {
 		return err
 	}
