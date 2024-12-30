@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,7 +11,28 @@ import (
 func main() {
 	m := http.NewServeMux()
 
-	m.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
+	m.HandleFunc("GET /checksum/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+
+		f, err := os.Open(id + ".plex")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer f.Close()
+
+		hash := sha256.New()
+		if _, err := f.WriteTo(hash); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "%x", hash.Sum(nil))
+	})
+
+	m.HandleFunc("GET /data/{id}", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("getting...")
 		id := r.PathValue("id")
 
@@ -24,10 +46,9 @@ func main() {
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
 		f.WriteTo(w)
-
 	})
 
-	m.HandleFunc("PUT /{id}", func(w http.ResponseWriter, r *http.Request) {
+	m.HandleFunc("PUT /data/{id}", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("receiving...")
 		id := r.PathValue("id")
 
