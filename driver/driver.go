@@ -287,8 +287,10 @@ func (d *plexVolumeDriver) saveToStore(vol *volumeInfo) error {
 func (d *plexVolumeDriver) loadFromStore(vol *volumeInfo) error {
 	var buf bytes.Buffer
 
+	fmt.Println("loading from store")
+
 	err := d.store.Retrieve(vol.ServerID, &buf)
-	if errors.Is(err, os.ErrNotExist) {
+	if errors.Is(err, os.ErrNotExist) || err == storage.ErrCacheHit {
 		return nil
 	}
 
