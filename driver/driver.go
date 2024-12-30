@@ -205,7 +205,7 @@ func (d *nfsVolumeDriver) Get(req *volume.GetRequest) (*volume.GetResponse, erro
 	return &volume.GetResponse{
 		Volume: &volume.Volume{
 			Name:       v.ServerID,
-			Mountpoint: v.mountpoint,
+			Mountpoint: v.Mountpoint,
 		},
 	}, nil
 }
@@ -218,7 +218,7 @@ func (d *nfsVolumeDriver) List() (*volume.ListResponse, error) {
 	for _, v := range d.Volumes {
 		vols = append(vols, &volume.Volume{
 			Name:       v.ServerID,
-			Mountpoint: v.mountpoint,
+			Mountpoint: v.Mountpoint,
 		})
 	}
 	return &volume.ListResponse{Volumes: vols}, nil
