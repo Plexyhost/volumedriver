@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 
 	"github.com/plexyhost/volume-driver/driver"
@@ -11,16 +12,23 @@ import (
 )
 
 func main() {
-	endpoint := "/live"
-	if err := os.MkdirAll(endpoint, 0755); err != nil {
+	directory := flag.String("directory", "/live", "The folder where data from live servers are stored")
+	endpoint := flag.String("endpoint", "", "The server which stores and retrieves server data")
+	flag.Parse()
+
+	if *endpoint == "" {
+		panic("--endpoint must be set to a compatible server")
+	}
+
+	if err := os.MkdirAll(*directory, 0755); err != nil {
 		logrus.Fatal(err)
 	}
 
-	store, err := storage.NewHTTPStorage("http://192.168.0.170:30000/")
+	store, err := storage.NewHTTPStorage(*endpoint)
 	if err != nil {
 		panic(err)
 	}
-	d := driver.NewPlexVolumeDriver(endpoint, store)
+	d := driver.NewPlexVolumeDriver(*directory, store)
 	h := volume.NewHandler(d)
 
 	logrus.Info("Starting volume driver")

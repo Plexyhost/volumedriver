@@ -213,8 +213,8 @@ func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 
 	// Cancel context and set mounted to false
 	d.mutex.Lock()
-	v.Mounted = false
 	v.cancel()
+	v.Mounted = false
 	d.mutex.Unlock()
 
 	// Save volumes to disk for persisency

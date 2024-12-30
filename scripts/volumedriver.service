@@ -1,0 +1,12 @@
+[Unit]
+Description=PlexHost Docker Volume
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/docker-volume-nfs
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

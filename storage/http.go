@@ -2,19 +2,15 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"sync"
 )
 
 type httpStorage struct {
 	cl       *http.Client
 	endpoint *url.URL
 	// checksums is a map that points any server id to the sum
-	checksums map[string]string
-	mutex     *sync.Mutex
 }
 
 func NewHTTPStorage(endpoint string) (StorageProvider, error) {
@@ -24,10 +20,8 @@ func NewHTTPStorage(endpoint string) (StorageProvider, error) {
 	}
 
 	return &httpStorage{
-		cl:        &http.Client{},
-		endpoint:  ep,
-		checksums: make(map[string]string),
-		mutex:     &sync.Mutex{},
+		cl:       &http.Client{},
+		endpoint: ep,
 	}, nil
 }
 
@@ -54,28 +48,6 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 }
 
 func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
-	checksum, err := hs.getChecksum(id)
-	if err != nil {
-		return err
-	}
-
-	hs.mutex.Lock()
-	existingChecksum, ok := hs.checksums[id]
-	hs.mutex.Unlock()
-	if ok {
-		fmt.Println("cache exists")
-		if checksum == existingChecksum {
-			fmt.Println("cache hit")
-			fmt.Printf("checksum: %v\n", checksum)
-			fmt.Printf("existingChecksum: %v\n", existingChecksum)
-			return nil
-		}
-	}
-
-	fmt.Println("cache NOT hit")
-	fmt.Printf("checksum: %v\n", checksum)
-	fmt.Printf("existingChecksum: %v\n", existingChecksum)
-
 	ep := hs.endpoint.JoinPath("data", id)
 	r, err := http.NewRequest("GET", "", nil)
 	r.URL = ep
@@ -99,35 +71,5 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 		return err
 	}
 
-	hs.mutex.Lock()
-	hs.checksums[id] = checksum
-	hs.mutex.Unlock()
-
 	return nil
-}
-
-func (hs *httpStorage) getChecksum(id string) (string, error) {
-	ep := hs.endpoint.JoinPath("checksum", id)
-	r, err := http.NewRequest("GET", "", nil)
-	r.URL = ep
-
-	if err != nil {
-		return "", err
-	}
-
-	res, err := hs.cl.Do(r)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		return "", ErrNon200
-	}
-
-	checksum, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(checksum), nil
 }

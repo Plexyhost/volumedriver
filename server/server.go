@@ -2,11 +2,24 @@ package main
 
 import (
 	"crypto/sha256"
-	"errors"
 	"fmt"
+	"io"
+	"math/rand/v2"
 	"net/http"
 	"os"
+	"strconv"
 )
+
+// Function to handle file cleanup after the upload is complete
+func finalizeFile(tempFilePath, finalFilePath string) error {
+	// Rename the temporary file to the final file name
+	err := os.Rename(tempFilePath, finalFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to finalize file: %v", err)
+	}
+	fmt.Println("File finalized and saved successfully.")
+	return nil
+}
 
 func main() {
 	m := http.NewServeMux()
@@ -51,26 +64,34 @@ func main() {
 	m.HandleFunc("PUT /data/{id}", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("receiving...")
 		id := r.PathValue("id")
+		fn := id + ".plex"
+		tf := strconv.Itoa(rand.IntN(512)) + ".bin"
 
-		f, err := os.Open(id + ".plex")
-		if errors.Is(err, os.ErrNotExist) {
-			fmt.Printf("err1: %v\n", err)
-			f, err = os.Create(id + ".plex")
-		}
-
+		outFile, err := os.OpenFile(tf, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
-			fmt.Printf("err2: %v\n", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Could not create temporary file", http.StatusInternalServerError)
 			return
 		}
-		defer f.Close()
-		defer r.Body.Close()
+		defer outFile.Close()
 
-		f.ReadFrom(r.Body)
-		defer r.Body.Close()
+		// Read the incoming file data from the request body and write it to the temporary file
+		_, err = io.Copy(outFile, r.Body)
+		if err != nil {
+			http.Error(w, "Failed to save file chunk", http.StatusInternalServerError)
+			return
+		}
 
+		// After the upload is complete, finalize the file
+		// In a real use case, you would check if all chunks have been uploaded
+		err = finalizeFile(tf, fn)
+		if err != nil {
+			http.Error(w, "Failed to finalize the file", http.StatusInternalServerError)
+			return
+		}
+
+		// Respond with success
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success!"))
+		w.Write([]byte("File uploaded and saved successfully"))
 	})
 
 	err := http.ListenAndServe(":30000", m)
