@@ -31,18 +31,19 @@ type volumeInfo struct {
 }
 
 type nfsVolumeDriver struct {
-	Volumes    map[string]*volumeInfo
-	mutex      *sync.RWMutex
-	endpoint   string
-	syncPeriod time.Duration
-	store      storage.StorageProvider
+	Volumes        map[string]*volumeInfo
+	mutex          *sync.RWMutex
+	endpoint       string
+	syncPeriod     time.Duration
+	store          storage.StorageProvider
+	volumeInfoPath string
 }
 
 func (d *nfsVolumeDriver) saveVolumes() error {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	file, err := os.Create(filepath.Join(d.endpoint, "volumes.json"))
+	file, err := os.Create(filepath.Join(d.endpoint, d.volumeInfoPath))
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func (d *nfsVolumeDriver) loadVolumes() error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	file, err := os.Open(filepath.Join(d.endpoint, "volumes.json"))
+	file, err := os.Open(filepath.Join(d.endpoint, d.volumeInfoPath))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -82,11 +83,12 @@ func (d *nfsVolumeDriver) loadVolumes() error {
 func NewNFSVolumeDriver(endpoint string, store storage.StorageProvider) *nfsVolumeDriver {
 
 	driver := &nfsVolumeDriver{
-		Volumes:    make(map[string]*volumeInfo),
-		mutex:      &sync.RWMutex{},
-		endpoint:   endpoint,
-		syncPeriod: 2 * time.Minute,
-		store:      store,
+		Volumes:        make(map[string]*volumeInfo),
+		mutex:          &sync.RWMutex{},
+		endpoint:       endpoint,
+		syncPeriod:     2 * time.Minute,
+		store:          store,
+		volumeInfoPath: "volumes.json",
 	}
 	if err := driver.loadVolumes(); err != nil {
 		logrus.WithError(err).Error("failed to load volumes")
