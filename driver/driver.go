@@ -72,6 +72,8 @@ func (d *nfsVolumeDriver) loadVolumes() error {
 	for _, v := range d.Volumes {
 		v.ctx, v.cancel = context.WithCancel(context.Background())
 		v.lastSync = time.Now()
+
+		go d.startPeriodicSave(v.ctx, v.ServerID)
 	}
 
 	return nil
