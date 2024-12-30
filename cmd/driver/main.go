@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/plexyhost/volume-driver/driver"
+	"github.com/plexyhost/volume-driver/storage"
 
 	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/sirupsen/logrus"
@@ -15,7 +16,8 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	d := driver.NewNFSVolumeDriver(endpoint)
+	store := storage.NewFSStorage("/storage")
+	d := driver.NewNFSVolumeDriver(endpoint, store)
 	h := volume.NewHandler(d)
 
 	logrus.Info("Starting volume driver")
