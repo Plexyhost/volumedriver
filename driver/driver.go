@@ -136,24 +136,18 @@ func (d *plexVolumeDriver) Create(req *volume.CreateRequest) error {
 // TODO: Alt det her skal rykkes til unmount.
 func (d *plexVolumeDriver) Remove(req *volume.RemoveRequest) error {
 
+	// Get volume
 	v, exists := d.Volumes[req.Name]
 	if !exists {
 		return fmt.Errorf("volume %s not found", req.Name)
 	}
 
-	// Write last time to
-
-	err := d.saveToStore(v)
-	if err != nil {
-		return err
-	}
-
-	v.cancel()
-
+	// Remove data from the disk
 	if err := os.RemoveAll(v.Mountpoint); err != nil {
 		return err
 	}
 
+	// Remove the volume info from d.Volumes
 	d.mutex.Lock()
 	delete(d.Volumes, req.Name)
 	d.mutex.Unlock()
@@ -197,12 +191,19 @@ func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	_, exists := d.Volumes[req.Name]
+	v, exists := d.Volumes[req.Name]
 	if !exists {
 		return fmt.Errorf("volume %s not found", req.Name)
 	}
 
-	fmt.Printf("unmount::req.Name: %v\n", req.Name)
+	//
+
+	err := d.saveToStore(v)
+	if err != nil {
+		return err
+	}
+
+	v.cancel()
 
 	return nil
 }
