@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	d := driver.NewNFSVolumeDriver(endpoint, store)
+	d := driver.NewPlexVolumeDriver(endpoint, store)
 	h := volume.NewHandler(d)
 
 	logrus.Info("Starting volume driver")
