@@ -38,6 +38,7 @@ func (fs fsStorage) Retrieve(id string, dst io.Writer) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	_, err = f.WriteTo(dst)
 	return err

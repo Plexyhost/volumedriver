@@ -19,11 +19,12 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		f.ReadFrom(r.Body)
-		defer r.Body.Close()
+		defer f.Close()
 
+		w.Header().Add("Content-Type", "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success!"))
+		f.WriteTo(w)
+
 	})
 
 	m.HandleFunc("PUT /{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -41,11 +42,14 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		defer f.Close()
 		defer r.Body.Close()
 
-		w.Header().Add("Content-Type", "application/octet-stream")
+		f.ReadFrom(r.Body)
+		defer r.Body.Close()
+
 		w.WriteHeader(http.StatusOK)
-		f.WriteTo(w)
+		w.Write([]byte("success!"))
 	})
 
 	err := http.ListenAndServe(":30000", m)
