@@ -101,35 +101,6 @@ func (d *plexVolumeDriver) Create(req *volume.CreateRequest) error {
 
 	logrus.WithField("name", req.Name).Info("Creating volume")
 
-	mountpoint := filepath.Join(d.endpoint, req.Name)
-	fmt.Printf("mountpoint: %v\n", mountpoint)
-	if err := os.MkdirAll(mountpoint, 0755); err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	d.mutex.Lock()
-	volInfo := &volumeInfo{
-		ServerID:   req.Name,
-		lastSync:   time.Now(),
-		Mountpoint: mountpoint,
-		ctx:        ctx,
-		cancel:     cancel,
-	}
-	d.Volumes[req.Name] = volInfo
-	d.mutex.Unlock()
-
-	// Load store
-	d.loadFromStore(volInfo)
-
-	// Start background sync for this volume
-	go d.startPeriodicSave(ctx, req.Name)
-
-	if err := d.saveVolumes(); err != nil {
-		logrus.WithError(err).Error("failed to save volumes")
-	}
-
 	return nil
 }
 
@@ -173,16 +144,46 @@ func (d *plexVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, 
 
 func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse, error) {
 	logrus.WithField("name", req.Name).Info("mounting driver")
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
 
+	d.mutex.RLock()
 	v, exists := d.Volumes[req.Name]
 	if !exists {
 		logrus.Error("volume not found?")
 		return nil, fmt.Errorf("volume %s not found", req.Name)
 	}
+	d.mutex.RUnlock()
 
 	fmt.Printf("v.mountpoint: %v\n", v.Mountpoint)
+	mountpoint := filepath.Join(d.endpoint, req.Name)
+	if err := os.MkdirAll(mountpoint, 0755); err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	fmt.Println("haj")
+
+	d.mutex.Lock()
+	volInfo := &volumeInfo{
+		ServerID:   req.Name,
+		lastSync:   time.Now(),
+		Mountpoint: mountpoint,
+		ctx:        ctx,
+		cancel:     cancel,
+	}
+	d.Volumes[req.Name] = volInfo
+	d.mutex.Unlock()
+	fmt.Println("haj2")
+
+	// Load store
+	d.loadFromStore(volInfo)
+
+	// Start background sync for this volume
+	go d.startPeriodicSave(ctx, req.Name)
+
+	if err := d.saveVolumes(); err != nil {
+		logrus.WithError(err).Error("failed to save volumes")
+	}
 
 	return &volume.MountResponse{Mountpoint: v.Mountpoint}, nil
 }
