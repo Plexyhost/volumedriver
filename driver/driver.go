@@ -245,7 +245,7 @@ func (d *nfsVolumeDriver) startPeriodicSave(ctx context.Context, volumeName stri
 			d.saveToStore(v)
 
 		case <-ctx.Done():
-			logrus.WithField("name", volumeName).Info("volume context ended")
+			logrus.WithField("name", volumeName).Info("volume context ended, ending periodic save")
 			return
 		}
 	}
@@ -258,6 +258,8 @@ func (d *nfsVolumeDriver) saveToStore(vol *volumeInfo) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("compressed all")
 
 	return d.store.Store(vol.ServerID, &buf)
 }
