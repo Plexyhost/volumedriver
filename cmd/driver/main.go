@@ -16,7 +16,10 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	store := storage.NewFSStorage("/storage")
+	store, err := storage.NewHTTPStorage("http://192.168.0.158:30000/")
+	if err != nil {
+		panic(err)
+	}
 	d := driver.NewNFSVolumeDriver(endpoint, store)
 	h := volume.NewHandler(d)
 
