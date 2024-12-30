@@ -61,13 +61,13 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 
 	hs.mutex.Lock()
 	existingChecksum, ok := hs.checksums[id]
-	hs.checksums[id] = checksum
 	hs.mutex.Unlock()
 	if ok {
-		fmt.Println("cache hit")
-		fmt.Printf("checksum: %v\n", checksum)
-		fmt.Printf("existingChecksum: %v\n", existingChecksum)
+		fmt.Println("cache exists")
 		if checksum == existingChecksum {
+			fmt.Println("cache hit")
+			fmt.Printf("checksum: %v\n", checksum)
+			fmt.Printf("existingChecksum: %v\n", existingChecksum)
 			return nil
 		}
 	}
@@ -91,11 +91,19 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return errors.New("non-200 response from http storage provider")
+		return ErrNon200
 	}
 
 	_, err = io.Copy(dst, res.Body)
-	return err
+	if err != nil {
+		return err
+	}
+
+	hs.mutex.Lock()
+	hs.checksums[id] = checksum
+	hs.mutex.Unlock()
+
+	return nil
 }
 
 func (hs *httpStorage) getChecksum(id string) (string, error) {
@@ -112,6 +120,10 @@ func (hs *httpStorage) getChecksum(id string) (string, error) {
 		return "", err
 	}
 	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return "", ErrNon200
+	}
+
 	checksum, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
