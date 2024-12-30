@@ -21,6 +21,7 @@ import (
 // mangler i memory ved genstart af driver
 type volumeInfo struct {
 	ServerID string
+	Mounted  bool
 
 	// Mountpoint is where the data will be saved locally
 	Mountpoint string
@@ -73,8 +74,9 @@ func (d *plexVolumeDriver) loadVolumes() error {
 	for _, v := range d.Volumes {
 		v.ctx, v.cancel = context.WithCancel(context.Background())
 		v.lastSync = time.Now()
-
-		go d.startPeriodicSave(v.ctx, v.ServerID)
+		if v.Mounted {
+			go d.startPeriodicSave(v.ctx, v.ServerID)
+		}
 	}
 
 	return nil
@@ -153,15 +155,13 @@ func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountRespons
 	}
 	d.mutex.RUnlock()
 
-	fmt.Printf("v.mountpoint: %v\n", v.Mountpoint)
+	v.Mounted = true
 	mountpoint := filepath.Join(d.endpoint, req.Name)
 	if err := os.MkdirAll(mountpoint, 0755); err != nil {
 		return nil, err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
-	fmt.Println("haj")
 
 	d.mutex.Lock()
 	volInfo := &volumeInfo{
@@ -173,7 +173,6 @@ func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountRespons
 	}
 	d.Volumes[req.Name] = volInfo
 	d.mutex.Unlock()
-	fmt.Println("haj2")
 
 	// Load store
 	d.loadFromStore(volInfo)
@@ -199,6 +198,9 @@ func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 
 	//
 
+	v.Mounted = false
+
+	fmt.Println("unmount triggered save to store")
 	err := d.saveToStore(v)
 	if err != nil {
 		return err
