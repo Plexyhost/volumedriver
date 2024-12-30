@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -35,7 +36,9 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 	if err != nil {
 		return err
 	}
+	cnt, _ := io.ReadAll(res.Body)
 	defer res.Body.Close()
+	fmt.Printf("cnt: %v\n", string(cnt))
 
 	if res.StatusCode == 200 {
 		return nil
