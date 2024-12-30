@@ -18,19 +18,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// mangler i memory ved genstart af driver
 type volumeInfo struct {
 	ServerID string
-	LastSync time.Time
 
 	// Mountpoint is where the data will be saved locally
-	mountpoint string
+	Mountpoint string
 
-	ctx    context.Context
-	cancel context.CancelFunc
+	lastSync time.Time
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
 type nfsVolumeDriver struct {
-	volumes    map[string]*volumeInfo
+	Volumes    map[string]*volumeInfo
 	mutex      *sync.RWMutex
 	endpoint   string
 	syncPeriod time.Duration
@@ -47,7 +48,7 @@ func (d *nfsVolumeDriver) saveVolumes() error {
 	}
 	defer file.Close()
 
-	return json.NewEncoder(file).Encode(d.volumes)
+	return json.NewEncoder(file).Encode(d.Volumes)
 }
 
 func (d *nfsVolumeDriver) loadVolumes() error {
@@ -63,13 +64,13 @@ func (d *nfsVolumeDriver) loadVolumes() error {
 	}
 	defer file.Close()
 
-	return json.NewDecoder(file).Decode(&d.volumes)
+	return json.NewDecoder(file).Decode(&d.Volumes)
 }
 
 func NewNFSVolumeDriver(endpoint string, store storage.StorageProvider) *nfsVolumeDriver {
 
 	driver := &nfsVolumeDriver{
-		volumes:    make(map[string]*volumeInfo),
+		Volumes:    make(map[string]*volumeInfo),
 		mutex:      &sync.RWMutex{},
 		endpoint:   endpoint,
 		syncPeriod: 2 * time.Minute,
@@ -97,12 +98,12 @@ func (d *nfsVolumeDriver) Create(req *volume.CreateRequest) error {
 	d.mutex.Lock()
 	volInfo := &volumeInfo{
 		ServerID:   req.Name,
-		LastSync:   time.Now(),
-		mountpoint: mountpoint,
+		lastSync:   time.Now(),
+		Mountpoint: mountpoint,
 		ctx:        ctx,
 		cancel:     cancel,
 	}
-	d.volumes[req.Name] = volInfo
+	d.Volumes[req.Name] = volInfo
 	d.mutex.Unlock()
 
 	// Load store
@@ -121,7 +122,7 @@ func (d *nfsVolumeDriver) Create(req *volume.CreateRequest) error {
 // TODO: Alt det her skal rykkes til unmount.
 func (d *nfsVolumeDriver) Remove(req *volume.RemoveRequest) error {
 
-	v, exists := d.volumes[req.Name]
+	v, exists := d.Volumes[req.Name]
 	if !exists {
 		return fmt.Errorf("volume %s not found", req.Name)
 	}
@@ -135,12 +136,12 @@ func (d *nfsVolumeDriver) Remove(req *volume.RemoveRequest) error {
 
 	v.cancel()
 
-	if err := os.RemoveAll(v.mountpoint); err != nil {
+	if err := os.RemoveAll(v.Mountpoint); err != nil {
 		return err
 	}
 
 	d.mutex.Lock()
-	delete(d.volumes, req.Name)
+	delete(d.Volumes, req.Name)
 	d.mutex.Unlock()
 
 	if err := d.saveVolumes(); err != nil {
@@ -154,12 +155,12 @@ func (d *nfsVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, e
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	v, exists := d.volumes[req.Name]
+	v, exists := d.Volumes[req.Name]
 	if !exists {
 		return nil, fmt.Errorf("volume %s not found", req.Name)
 	}
 
-	return &volume.PathResponse{Mountpoint: v.mountpoint}, nil
+	return &volume.PathResponse{Mountpoint: v.Mountpoint}, nil
 }
 
 func (d *nfsVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse, error) {
@@ -167,25 +168,27 @@ func (d *nfsVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	v, exists := d.volumes[req.Name]
+	v, exists := d.Volumes[req.Name]
 	if !exists {
 		logrus.Error("volume not found?")
 		return nil, fmt.Errorf("volume %s not found", req.Name)
 	}
 
-	fmt.Printf("v.mountpoint: %v\n", v.mountpoint)
+	fmt.Printf("v.mountpoint: %v\n", v.Mountpoint)
 
-	return &volume.MountResponse{Mountpoint: v.mountpoint}, nil
+	return &volume.MountResponse{Mountpoint: v.Mountpoint}, nil
 }
 
 func (d *nfsVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	_, exists := d.volumes[req.Name]
+	_, exists := d.Volumes[req.Name]
 	if !exists {
 		return fmt.Errorf("volume %s not found", req.Name)
 	}
+
+	fmt.Printf("unmount::req.Name: %v\n", req.Name)
 
 	return nil
 }
@@ -194,7 +197,7 @@ func (d *nfsVolumeDriver) Get(req *volume.GetRequest) (*volume.GetResponse, erro
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	v, exists := d.volumes[req.Name]
+	v, exists := d.Volumes[req.Name]
 	if !exists {
 		return nil, fmt.Errorf("volume %s not found", req.Name)
 	}
@@ -212,7 +215,7 @@ func (d *nfsVolumeDriver) List() (*volume.ListResponse, error) {
 	defer d.mutex.RUnlock()
 
 	var vols []*volume.Volume
-	for _, v := range d.volumes {
+	for _, v := range d.Volumes {
 		vols = append(vols, &volume.Volume{
 			Name:       v.ServerID,
 			Mountpoint: v.mountpoint,
@@ -235,7 +238,7 @@ func (d *nfsVolumeDriver) startPeriodicSave(ctx context.Context, volumeName stri
 		select {
 		case <-ticker.C:
 			d.mutex.RLock()
-			v, exists := d.volumes[volumeName]
+			v, exists := d.Volumes[volumeName]
 			d.mutex.RUnlock()
 
 			if !exists {
@@ -256,7 +259,7 @@ func (d *nfsVolumeDriver) startPeriodicSave(ctx context.Context, volumeName stri
 func (d *nfsVolumeDriver) saveToStore(vol *volumeInfo) error {
 	var buf bytes.Buffer
 
-	err := cmp.Compress(vol.mountpoint, &buf)
+	err := cmp.Compress(vol.Mountpoint, &buf)
 	if err != nil {
 		return err
 	}
@@ -278,5 +281,5 @@ func (d *nfsVolumeDriver) loadFromStore(vol *volumeInfo) error {
 		return err
 	}
 
-	return cmp.Decompress(&buf, vol.mountpoint)
+	return cmp.Decompress(&buf, vol.Mountpoint)
 }
