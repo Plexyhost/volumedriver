@@ -49,7 +49,6 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	if err != nil {
 		return err
 	}
-	defer r.Body.Close()
 
 	if r.Response.StatusCode != 200 {
 		return errors.New("non-200 response from http storage provider")
