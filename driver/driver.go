@@ -1,17 +1,14 @@
 package driver
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/plexyhost/volume-driver/cmp"
 	"github.com/plexyhost/volume-driver/storage"
 
 	"github.com/docker/go-plugins-helpers/volume"
@@ -103,6 +100,28 @@ func (d *plexVolumeDriver) Create(req *volume.CreateRequest) error {
 
 	logrus.WithField("name", req.Name).Info("Creating volume")
 
+	mountpoint := filepath.Join(d.endpoint, req.Name)
+	fmt.Printf("mountpoint: %v\n", mountpoint)
+	if err := os.MkdirAll(mountpoint, 0755); err != nil {
+		return err
+	}
+
+	d.mutex.Lock()
+	volInfo := &volumeInfo{
+		ServerID:   req.Name,
+		Mountpoint: mountpoint,
+		Mounted:    false,
+		lastSync:   time.Now(),
+		ctx:        nil,
+		cancel:     nil,
+	}
+	d.Volumes[req.Name] = volInfo
+	d.mutex.Unlock()
+
+	if err := d.saveVolumes(); err != nil {
+		logrus.WithError(err).Error("failed to save volumes")
+	}
+
 	return nil
 }
 
@@ -147,6 +166,7 @@ func (d *plexVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, 
 func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse, error) {
 	logrus.WithField("name", req.Name).Info("mounting driver")
 
+	// Find volume
 	d.mutex.RLock()
 	v, exists := d.Volumes[req.Name]
 	if !exists {
@@ -155,31 +175,19 @@ func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountRespons
 	}
 	d.mutex.RUnlock()
 
-	v.Mounted = true
-	mountpoint := filepath.Join(d.endpoint, req.Name)
-	if err := os.MkdirAll(mountpoint, 0755); err != nil {
-		return nil, err
-	}
+	// Load store
+	d.loadFromStore(v)
 
-	ctx, cancel := context.WithCancel(context.Background())
-
+	// Set mounted and context stuff
 	d.mutex.Lock()
-	volInfo := &volumeInfo{
-		ServerID:   req.Name,
-		lastSync:   time.Now(),
-		Mountpoint: mountpoint,
-		ctx:        ctx,
-		cancel:     cancel,
-	}
-	d.Volumes[req.Name] = volInfo
+	v.Mounted = true
+	v.ctx, v.cancel = context.WithCancel(context.Background())
 	d.mutex.Unlock()
 
-	// Load store
-	d.loadFromStore(volInfo)
-
 	// Start background sync for this volume
-	go d.startPeriodicSave(ctx, req.Name)
+	go d.startPeriodicSave(v.ctx, v.ServerID)
 
+	// Save volumes to disk for persisency
 	if err := d.saveVolumes(); err != nil {
 		logrus.WithError(err).Error("failed to save volumes")
 	}
@@ -188,17 +196,14 @@ func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountRespons
 }
 
 func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
+	logrus.WithField("name", req.Name).Info("unmounting driver")
 
+	d.mutex.RLock()
 	v, exists := d.Volumes[req.Name]
 	if !exists {
 		return fmt.Errorf("volume %s not found", req.Name)
 	}
-
-	//
-
-	v.Mounted = false
+	d.mutex.RUnlock()
 
 	fmt.Println("unmount triggered save to store")
 	err := d.saveToStore(v)
@@ -206,7 +211,16 @@ func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 		return err
 	}
 
+	// Cancel context and set mounted to false
+	d.mutex.Lock()
+	v.Mounted = false
 	v.cancel()
+	d.mutex.Unlock()
+
+	// Save volumes to disk for persisency
+	if err := d.saveVolumes(); err != nil {
+		logrus.WithError(err).Error("failed to save volumes")
+	}
 
 	return nil
 }
