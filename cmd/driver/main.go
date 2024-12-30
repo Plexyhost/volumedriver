@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	endpoint := "/mnt/serverdata"
+	endpoint := "/live"
 	if err := os.MkdirAll(endpoint, 0755); err != nil {
 		logrus.Fatal(err)
 	}
