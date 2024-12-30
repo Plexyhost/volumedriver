@@ -3,6 +3,7 @@ package enc
 import (
 	"archive/tar"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ func Compress(src string, dst io.Writer) error {
 	tw := tar.NewWriter(zr)
 
 	filepath.Walk(src, func(file string, fi os.FileInfo, _ error) error {
+		fmt.Printf("file: %v\n", file)
 
 		// Construct header
 		header, err := tar.FileInfoHeader(fi, file)

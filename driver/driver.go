@@ -3,6 +3,7 @@ package driver
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/plexyhost/volume-driver/enc"
+	"github.com/plexyhost/volume-driver/storage"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,21 +32,54 @@ type nfsVolumeDriver struct {
 	mutex      *sync.RWMutex
 	endpoint   string
 	syncPeriod time.Duration
+	store      storage.StorageProvider
 }
 
-func NewNFSVolumeDriver(endpoint string) *nfsVolumeDriver {
-	return &nfsVolumeDriver{
+func (d *nfsVolumeDriver) saveVolumes() error {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+
+	file, err := os.Create(filepath.Join(d.endpoint, "volumes.json"))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewEncoder(file).Encode(d.volumes)
+}
+
+func (d *nfsVolumeDriver) loadVolumes() error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	file, err := os.Open(filepath.Join(d.endpoint, "volumes.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer file.Close()
+
+	return json.NewDecoder(file).Decode(&d.volumes)
+}
+
+func NewNFSVolumeDriver(endpoint string, store storage.StorageProvider) *nfsVolumeDriver {
+	driver := &nfsVolumeDriver{
 		volumes:    make(map[string]*volumeInfo),
 		mutex:      &sync.RWMutex{},
 		endpoint:   endpoint,
-		syncPeriod: 5 * time.Minute,
+		syncPeriod: 2 * time.Minute,
+		store:      store,
 	}
+	if err := driver.loadVolumes(); err != nil {
+		logrus.WithError(err).Error("failed to load volumes")
+	}
+	return driver
 }
 
 // req.Name __has__ to be the server's id.
 func (d *nfsVolumeDriver) Create(req *volume.CreateRequest) error {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
 
 	logrus.WithField("name", req.Name).Info("Creating volume")
 
@@ -59,23 +94,28 @@ func (d *nfsVolumeDriver) Create(req *volume.CreateRequest) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	d.mutex.Lock()
 	d.volumes[req.Name] = &volumeInfo{
-		ServerID: req.Name,
-		LastSync: time.Now(),
-		ctx:      ctx,
-		cancel:   cancel,
+		ServerID:   req.Name,
+		LastSync:   time.Now(),
+		mountpoint: mountpoint,
+		ctx:        ctx,
+		cancel:     cancel,
 	}
+	d.mutex.Unlock()
 
 	// Start background sync for this volume
 	go d.startPeriodicSave(ctx, req.Name)
+
+	if err := d.saveVolumes(); err != nil {
+		logrus.WithError(err).Error("failed to save volumes")
+	}
 
 	return nil
 }
 
 // TODO: Alt det her skal rykkes til unmount.
 func (d *nfsVolumeDriver) Remove(req *volume.RemoveRequest) error {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
 
 	v, exists := d.volumes[req.Name]
 	if !exists {
@@ -88,21 +128,20 @@ func (d *nfsVolumeDriver) Remove(req *volume.RemoveRequest) error {
 	var buf bytes.Buffer
 
 	enc.Compress(v.mountpoint, &buf)
-	f, err := os.Open("/backups/" + v.ServerID + ".tar.gz")
-	if err != nil {
-		return err
-	}
-	n, err := buf.WriteTo(f)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("bytes written: %v\n", n)
+	d.store.Store(v.ServerID, &buf)
 
 	if err := os.RemoveAll(v.mountpoint); err != nil {
 		return err
 	}
 
+	d.mutex.Lock()
 	delete(d.volumes, req.Name)
+	d.mutex.Unlock()
+
+	if err := d.saveVolumes(); err != nil {
+		logrus.WithError(err).Error("failed to save volumes")
+	}
+
 	return nil
 }
 
@@ -119,13 +158,17 @@ func (d *nfsVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, e
 }
 
 func (d *nfsVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse, error) {
+	logrus.WithField("name", req.Name).Info("mounting driver")
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
 	v, exists := d.volumes[req.Name]
 	if !exists {
+		logrus.Error("volume not found?")
 		return nil, fmt.Errorf("volume %s not found", req.Name)
 	}
+
+	fmt.Printf("v.mountpoint: %v\n", v.mountpoint)
 
 	return &volume.MountResponse{Mountpoint: v.mountpoint}, nil
 }
@@ -189,17 +232,19 @@ func (d *nfsVolumeDriver) startPeriodicSave(ctx context.Context, volumeName stri
 			d.mutex.RLock()
 			v, exists := d.volumes[volumeName]
 			d.mutex.RUnlock()
-			logrus.WithField("id", v.ServerID).Info("syncing...")
 
 			if !exists {
 				return
 			}
+
+			logrus.WithField("id", v.ServerID).Info("syncing...")
 
 			// TODO
 			// Gzip
 			// Send to http data server
 
 		case <-ctx.Done():
+			logrus.WithField("name", volumeName).Info("volume context ended")
 			return
 		}
 	}
