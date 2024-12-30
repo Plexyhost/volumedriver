@@ -64,7 +64,17 @@ func (d *nfsVolumeDriver) loadVolumes() error {
 	}
 	defer file.Close()
 
-	return json.NewDecoder(file).Decode(&d.Volumes)
+	err = json.NewDecoder(file).Decode(&d.Volumes)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range d.Volumes {
+		v.ctx, v.cancel = context.WithCancel(context.Background())
+		v.lastSync = time.Now()
+	}
+
+	return nil
 }
 
 func NewNFSVolumeDriver(endpoint string, store storage.StorageProvider) *nfsVolumeDriver {
