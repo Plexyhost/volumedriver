@@ -32,7 +32,7 @@ type nfsVolumeDriver struct {
 	syncPeriod time.Duration
 }
 
-func newNFSVolumeDriver(endpoint string) *nfsVolumeDriver {
+func NewNFSVolumeDriver(endpoint string) *nfsVolumeDriver {
 	return &nfsVolumeDriver{
 		volumes:    make(map[string]*volumeInfo),
 		mutex:      &sync.RWMutex{},
@@ -187,8 +187,9 @@ func (d *nfsVolumeDriver) startPeriodicSave(ctx context.Context, volumeName stri
 		select {
 		case <-ticker.C:
 			d.mutex.RLock()
-			vol, exists := d.volumes[volumeName]
+			v, exists := d.volumes[volumeName]
 			d.mutex.RUnlock()
+			logrus.WithField("id", v.ServerID).Info("syncing...")
 
 			if !exists {
 				return
