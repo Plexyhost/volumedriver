@@ -31,6 +31,8 @@ func (fs fsStorage) Store(id string, src io.Reader) error {
 	if err != nil {
 		return err
 	}
+	s, _ := f.Stat()
+	fmt.Printf("s.Name(): %v\n", s.Name())
 	var n int64
 	fmt.Println("store: file is reading from src")
 	n, err = f.ReadFrom(src)
