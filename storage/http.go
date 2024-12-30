@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -32,21 +33,6 @@ func NewHTTPStorage(endpoint string) (StorageProvider, error) {
 
 // Must return
 func (hs *httpStorage) Store(id string, src io.Reader) error {
-	checksum, err := hs.getChecksum(id)
-	if err != nil {
-		return err
-	}
-
-	hs.mutex.Lock()
-	existingChecksum, ok := hs.checksums[id]
-	hs.checksums[id] = checksum
-	hs.mutex.Unlock()
-	if ok {
-		if checksum == existingChecksum {
-			return nil
-		}
-	}
-
 	ep := hs.endpoint.JoinPath("data", id)
 	r, err := http.NewRequest("PUT", "", src)
 	r.URL = ep
@@ -68,6 +54,28 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 }
 
 func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
+	checksum, err := hs.getChecksum(id)
+	if err != nil {
+		return err
+	}
+
+	hs.mutex.Lock()
+	existingChecksum, ok := hs.checksums[id]
+	hs.checksums[id] = checksum
+	hs.mutex.Unlock()
+	if ok {
+		fmt.Println("cache hit")
+		fmt.Printf("checksum: %v\n", checksum)
+		fmt.Printf("existingChecksum: %v\n", existingChecksum)
+		if checksum == existingChecksum {
+			return nil
+		}
+	}
+
+	fmt.Println("cache NOT hit")
+	fmt.Printf("checksum: %v\n", checksum)
+	fmt.Printf("existingChecksum: %v\n", existingChecksum)
+
 	ep := hs.endpoint.JoinPath("data", id)
 	r, err := http.NewRequest("GET", "", nil)
 	r.URL = ep
