@@ -1,10 +1,11 @@
-package enc
+package cmp
 
 import (
 	"archive/tar"
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -15,15 +16,25 @@ func Compress(src string, dst io.Writer) error {
 	zr := gzip.NewWriter(dst)
 	tw := tar.NewWriter(zr)
 
-	filepath.Walk(src, func(file string, fi os.FileInfo, _ error) error {
+	filepath.WalkDir(src, func(file string, e fs.DirEntry, _ error) error {
 		fmt.Printf("file: %v\n", file)
 
 		// Construct header
+		fi, err := e.Info()
+		if err != nil {
+			return err
+		}
+
 		header, err := tar.FileInfoHeader(fi, file)
 		if err != nil {
 			return err
 		}
-		header.Name = filepath.ToSlash(file)
+		// Make the header name relative to the src directory
+		header.Name, err = filepath.Rel(src, file)
+		if err != nil {
+			return err
+		}
+		header.Name = filepath.ToSlash(header.Name)
 
 		// Write header through writer chain
 		if err := tw.WriteHeader(header); err != nil {
@@ -35,6 +46,7 @@ func Compress(src string, dst io.Writer) error {
 			if err != nil {
 				return err
 			}
+			defer data.Close()
 			if _, err := io.Copy(tw, data); err != nil {
 				return err
 			}

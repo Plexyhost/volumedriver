@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/docker/go-plugins-helpers/volume"
-	"github.com/plexyhost/volume-driver/enc"
+	"github.com/plexyhost/volume-driver/cmp"
 	"github.com/plexyhost/volume-driver/storage"
+
+	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/sirupsen/logrus"
 )
 
@@ -88,21 +90,21 @@ func (d *nfsVolumeDriver) Create(req *volume.CreateRequest) error {
 		return err
 	}
 
-	// TODO
-	// Initial request of data
-	// Unziping using gzip.Writer(req.Body)
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	d.mutex.Lock()
-	d.volumes[req.Name] = &volumeInfo{
+	volInfo := &volumeInfo{
 		ServerID:   req.Name,
 		LastSync:   time.Now(),
 		mountpoint: mountpoint,
 		ctx:        ctx,
 		cancel:     cancel,
 	}
+	d.volumes[req.Name] = volInfo
 	d.mutex.Unlock()
+
+	// Load store
+	d.loadFromStore(volInfo)
 
 	// Start background sync for this volume
 	go d.startPeriodicSave(ctx, req.Name)
@@ -122,13 +124,14 @@ func (d *nfsVolumeDriver) Remove(req *volume.RemoveRequest) error {
 		return fmt.Errorf("volume %s not found", req.Name)
 	}
 
-	// TODO
-	// Final sync to NFS before removal
+	// Write last time to
 
-	var buf bytes.Buffer
+	err := d.saveToStore(v)
+	if err != nil {
+		return err
+	}
 
-	enc.Compress(v.mountpoint, &buf)
-	d.store.Store(v.ServerID, &buf)
+	v.cancel()
 
 	if err := os.RemoveAll(v.mountpoint); err != nil {
 		return err
@@ -239,13 +242,37 @@ func (d *nfsVolumeDriver) startPeriodicSave(ctx context.Context, volumeName stri
 
 			logrus.WithField("id", v.ServerID).Info("syncing...")
 
-			// TODO
-			// Gzip
-			// Send to http data server
+			d.saveToStore(v)
 
 		case <-ctx.Done():
 			logrus.WithField("name", volumeName).Info("volume context ended")
 			return
 		}
 	}
+}
+
+func (d *nfsVolumeDriver) saveToStore(vol *volumeInfo) error {
+	var buf bytes.Buffer
+
+	err := cmp.Compress(vol.mountpoint, &buf)
+	if err != nil {
+		return err
+	}
+
+	return d.store.Store(vol.ServerID, &buf)
+}
+
+func (d *nfsVolumeDriver) loadFromStore(vol *volumeInfo) error {
+	var buf bytes.Buffer
+
+	err := d.store.Retrieve(vol.ServerID, &buf)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return cmp.Decompress(&buf, vol.mountpoint)
 }
