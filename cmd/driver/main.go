@@ -16,7 +16,7 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	store, err := storage.NewHTTPStorage("http://192.168.0.158:30000/")
+	store, err := storage.NewHTTPStorage("http://192.168.0.170:30000/")
 	if err != nil {
 		panic(err)
 	}

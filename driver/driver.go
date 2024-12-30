@@ -291,6 +291,7 @@ func (d *plexVolumeDriver) loadFromStore(vol *volumeInfo) error {
 	fmt.Println("loading from store")
 
 	err := d.store.Retrieve(vol.ServerID, &buf)
+	fmt.Printf("err: %v\n", err)
 	if errors.Is(err, os.ErrNotExist) || err == storage.ErrCacheHit {
 		return nil
 	}
