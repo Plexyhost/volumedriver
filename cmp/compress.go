@@ -3,7 +3,6 @@ package cmp
 import (
 	"archive/tar"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -17,8 +16,6 @@ func Compress(src string, dst io.Writer) error {
 	tw := tar.NewWriter(zr)
 
 	filepath.WalkDir(src, func(file string, e fs.DirEntry, _ error) error {
-		fmt.Printf("file: %v\n", file)
-
 		// Construct header
 		fi, err := e.Info()
 		if err != nil {
