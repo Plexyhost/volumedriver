@@ -1,0 +1,36 @@
+{
+  "description": "PlexHost Volume Driver",
+  "documentation": "github.com/plexyhost/volume-driver",
+  "entrypoint": ["/usr/bin/volumedriver"],
+  "env": [
+    {
+      "name": "DEBUG",
+      "settable": ["value"],
+      "value": "0"
+    }
+  ],
+  "interface": {
+    "types": ["docker.volumedriver/1.0"],
+    "socket": "volumedriver.sock"
+  },
+  "linux": {
+    "capabilities": [
+      "CAP_SYS_ADMIN",
+      "CAP_DAC_READ_SEARCH",
+      "CAP_MKNOD"
+    ],
+    "devices": [],
+    "mounts": [
+      {
+        "type": "bind",
+        "source": "/var/lib/docker/plugins/",
+        "destination": "/var/lib/docker/plugins/",
+        "options": ["rbind"]
+      }
+    ]
+  },
+  "network": {
+    "type": "host"
+  },
+  "propagatedMount": "/var/lib/docker/volumes"
+}

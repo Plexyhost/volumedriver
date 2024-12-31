@@ -4,9 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/docker-volume-nfs
+ExecStart=/usr/local/bin/plexdriver --endpoint http://192.168.0.170:30000/
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
+WantedBy=default.target

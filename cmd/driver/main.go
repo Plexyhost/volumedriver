@@ -32,7 +32,7 @@ func main() {
 	h := volume.NewHandler(d)
 
 	logrus.Info("Starting volume driver")
-	if err := h.ServeUnix("plexvol", 0); err != nil {
+	if err := h.ServeUnix("plexhost", 0); err != nil {
 		logrus.Fatal(err)
 	}
 }
