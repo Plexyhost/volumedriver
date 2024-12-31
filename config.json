@@ -10,6 +10,14 @@
     "type": "host"
   },
   "propagatedMount": "/live",
+  "Mounts": [
+    {
+      "type": "bind",
+      "source": "/live",
+      "destination": "/live",
+      "options": ["rbind"]
+    }
+  ],
   "linux": {
     "capabilities": ["CAP_SYS_ADMIN"]
   }

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log"
 	"math/rand/v2"
 	"net/http"
 	"os"
@@ -36,6 +37,7 @@ func main() {
 
 		hash := sha256.New()
 		if _, err := f.WriteTo(hash); err != nil {
+			log.Default().Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -51,6 +53,7 @@ func main() {
 
 		f, err := os.Open(id + ".plex")
 		if err != nil {
+			log.Default().Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -69,6 +72,7 @@ func main() {
 
 		outFile, err := os.OpenFile(tf, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
+			log.Default().Println(err)
 			http.Error(w, "Could not create temporary file", http.StatusInternalServerError)
 			return
 		}
@@ -77,6 +81,7 @@ func main() {
 		// Read the incoming file data from the request body and write it to the temporary file
 		_, err = io.Copy(outFile, r.Body)
 		if err != nil {
+			log.Default().Println(err)
 			http.Error(w, "Failed to save file chunk", http.StatusInternalServerError)
 			return
 		}
@@ -85,6 +90,7 @@ func main() {
 		// In a real use case, you would check if all chunks have been uploaded
 		err = finalizeFile(tf, fn)
 		if err != nil {
+			log.Default().Println(err)
 			http.Error(w, "Failed to finalize the file", http.StatusInternalServerError)
 			return
 		}
