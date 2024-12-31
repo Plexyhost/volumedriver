@@ -1,7 +1,7 @@
 FROM golang:1.20-alpine AS builder
 WORKDIR /go/src/volumedriver
 COPY . .
-RUN go build -o /usr/bin/volumedriver
+RUN go build -o /usr/bin/volumedriver cmd/driver/main.go
 
 FROM alpine:latest
 RUN apk add --no-cache ca-certificates \
