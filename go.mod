@@ -1,6 +1,6 @@
 module github.com/plexyhost/volume-driver
 
-go 1.23.3
+go 1.23
 
 require (
 	github.com/docker/go-plugins-helpers v0.0.0-20240701071450-45e2431495c8
