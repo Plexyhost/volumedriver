@@ -1,4 +1,3 @@
-
 {
   "description": "PlexHost Volume driver",
   "documentation": "https://github.com/plexyhost/volumedriver",
@@ -58,10 +57,7 @@
     }
   ],
   "interface": {
-    "socket": "plexhost.sock",
-    "types": [
-      "docker.volumedriver/2.0"
-    ]
+    "socket": "plexhost.sock"
   },
   "linux": {
     "capabilities": [
