@@ -1,0 +1,16 @@
+{
+  "description": "Plexhost volume plugin for Docker",
+  "documentation": "https://github.com/plexyhost/volume-driver",
+  "entrypoint": ["/usr/bin/plexhost-volume-plugin"],
+  "interface": {
+    "types": ["docker.volumedriver/1.0"],
+    "socket": "plexhost.sock"
+  },
+  "network": {
+    "type": "host"
+  },
+  "propagatedMount": "/live",
+  "linux": {
+    "capabilities": ["CAP_SYS_ADMIN"]
+  }
+}
