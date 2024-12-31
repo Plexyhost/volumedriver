@@ -1,36 +1,80 @@
+
 {
-  "description": "PlexHost Volume Driver",
-  "documentation": "github.com/plexyhost/volume-driver",
-  "entrypoint": ["/usr/bin/volumedriver"],
+  "description": "PlexHost Volume driver",
+  "documentation": "https://github.com/plexyhost/volumedriver",
+  "workdir": "/bin",
+  "entrypoint": [
+    "driver"
+  ],
   "env": [
     {
-      "name": "DEBUG",
-      "settable": ["value"],
-      "value": "0"
+      "name": "HOST",
+      "settable": [
+        "value"
+      ],
+      "value": "mfsmaster"
+    },
+    {
+      "name": "PORT",
+      "settable": [
+        "value"
+      ],
+      "value": "9421"
+    },
+    {
+      "name": "ROOT_VOLUME_NAME",
+      "settable": [
+        "value"
+      ],
+      "value": ""
+    },
+    {
+      "name": "MOUNT_OPTIONS",
+      "settable": [
+        "value"
+      ],
+      "value": ""
+    },
+    {
+      "name": "REMOTE_PATH",
+      "settable": [
+        "value"
+      ],
+      "value": "/docker/volumes"
+    },
+    {
+      "name": "CONNECT_TIMEOUT",
+      "settable": [
+        "value"
+      ],
+      "value": "10000"
+    },
+    {
+      "name": "LOG_LEVEL",
+      "settable": [
+        "value"
+      ],
+      "value": "info"
     }
   ],
   "interface": {
-    "types": ["docker.volumedriver/1.0"],
-    "socket": "volumedriver.sock"
+    "socket": "plexhost.sock",
+    "types": [
+      "docker.volumedriver/2.0"
+    ]
   },
   "linux": {
     "capabilities": [
-      "CAP_SYS_ADMIN",
-      "CAP_DAC_READ_SEARCH",
-      "CAP_MKNOD"
+      "CAP_SYS_ADMIN"
     ],
-    "devices": [],
-    "mounts": [
+    "devices": [
       {
-        "type": "bind",
-        "source": "/var/lib/docker/plugins/",
-        "destination": "/var/lib/docker/plugins/",
-        "options": ["rbind"]
+        "path": "/dev/fuse"
       }
     ]
   },
   "network": {
     "type": "host"
   },
-  "propagatedMount": "/var/lib/docker/volumes"
+  "propagatedMount": "/mnt/docker-volumes"
 }

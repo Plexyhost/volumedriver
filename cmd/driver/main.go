@@ -11,6 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	socketAddr = "/run/docker/plugins/plexhost.sock"
+)
+
 func main() {
 	directory := flag.String("directory", "/live", "The folder where data from live servers are stored")
 	endpoint := flag.String("endpoint", "", "The server which stores and retrieves server data")
@@ -32,7 +36,7 @@ func main() {
 	h := volume.NewHandler(d)
 
 	logrus.Info("Starting volume driver")
-	if err := h.ServeUnix("plexhost", 0); err != nil {
+	if err := h.ServeUnix(socketAddr, 0); err != nil {
 		logrus.Fatal(err)
 	}
 }

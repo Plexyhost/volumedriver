@@ -1,14 +1,16 @@
 FROM golang:1.23-alpine AS builder
-WORKDIR /go/src/volumedriver
-COPY . .
-RUN go build -o /usr/bin/volumedriver cmd/driver/main.go
+COPY . /app/
+WORKDIR /app
+RUN go build -o /bin/driver cmd/driver/main.go
 
 FROM alpine:latest
 RUN apk add --no-cache ca-certificates \
+    && mkdir -p /run/docker/plugins \
     && mkdir -p /var/lib/docker/volumes \
     && mkdir -p /var/lib/docker/plugins \
+    && chmod 755 /run/docker/plugins \
     && chmod 755 /var/lib/docker/volumes \
     && chmod 755 /var/lib/docker/plugins
-COPY --from=builder /usr/bin/volumedriver /usr/bin/volumedriver
+COPY --from=builder /bin/driver /bin/driver
 WORKDIR /
-ENTRYPOINT ["/usr/bin/volumedriver"]
+ENTRYPOINT ["/bin/driver"]
