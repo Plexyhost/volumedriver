@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	// Docker will create a directory with plugin ID, so we only specify the socket name
-	socketName = "plexhost.sock"
+	socketName = "plexhost"
 )
 
 func main() {
@@ -37,7 +36,7 @@ func main() {
 	h := volume.NewHandler(d)
 
 	logrus.Info("Starting volume driver")
-	// Let Docker handle the full socket path
+
 	if err := h.ServeUnix(socketName, 0); err != nil {
 		logrus.Fatal(err)
 	}

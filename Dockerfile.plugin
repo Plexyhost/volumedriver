@@ -1,10 +1,10 @@
 FROM golang:1.23-alpine AS builder
-COPY . /app/
-WORKDIR /app
-RUN go build -o /bin/driver cmd/driver/main.go
+WORKDIR /go/src/github.com/plexyhost/volume-driver
+COPY . .
+RUN go build -o /usr/bin/plexhost-volume-plugin ./cmd/driver
 
 FROM alpine:latest
-RUN apk add --no-cache ca-certificates
-COPY --from=builder /bin/driver /bin/driver
-WORKDIR /
-ENTRYPOINT ["/bin/driver"]
+RUN mkdir -p /live
+COPY --from=builder /usr/bin/plexhost-volume-plugin /usr/bin/plexhost-volume-plugin
+RUN chmod +x /usr/bin/plexhost-volume-plugin
+ENTRYPOINT ["/usr/bin/plexhost-volume-plugin"]
