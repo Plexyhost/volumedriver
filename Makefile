@@ -1,4 +1,4 @@
-PLUGIN_NAME=yourusername/volumedriver
+PLUGIN_NAME=barealek/plexhost-driver
 PLUGIN_TAG=latest
 
 all: clean rootfs create
