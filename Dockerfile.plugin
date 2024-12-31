@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine AS builder
+FROM golang:1.23-alpine AS builder
 WORKDIR /go/src/volumedriver
 COPY . .
 RUN go build -o /usr/bin/volumedriver cmd/driver/main.go
