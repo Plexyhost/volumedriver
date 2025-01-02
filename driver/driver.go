@@ -12,7 +12,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/plexyhost/volume-driver/storage"
-	"github.com/sirupsen/logrus"
 )
 
 // mangler i memory ved genstart af driver
@@ -281,12 +280,11 @@ func (d *PlexVolumeDriver) startPeriodicSave(ctx context.Context, volumeName str
 				return
 			}
 
-			logrus.WithField("id", v.ServerID).Info("syncing...")
 			log.Debug("Syncing volume", "id", v.ServerID)
 
 			err := d.saveToStore(v)
 			if err != nil {
-				log.Error("Failed to sync volume periodically", "error", err)
+				log.Error("Failed to sync volume periodically", "id", v.ServerID, "error", err)
 			}
 
 		case <-ctx.Done():
