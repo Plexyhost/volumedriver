@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plexyhost/volume-driver/storage"
-
+	"github.com/charmbracelet/log"
 	"github.com/docker/go-plugins-helpers/volume"
+	"github.com/plexyhost/volume-driver/storage"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,7 +28,7 @@ type volumeInfo struct {
 	cancel   context.CancelFunc
 }
 
-type plexVolumeDriver struct {
+type PlexVolumeDriver struct {
 	Volumes        map[string]*volumeInfo
 	mutex          *sync.RWMutex
 	endpoint       string
@@ -37,7 +37,7 @@ type plexVolumeDriver struct {
 	volumeInfoPath string
 }
 
-func (d *plexVolumeDriver) saveVolumes() error {
+func (d *PlexVolumeDriver) saveVolumes() error {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -50,7 +50,7 @@ func (d *plexVolumeDriver) saveVolumes() error {
 	return json.NewEncoder(file).Encode(d.Volumes)
 }
 
-func (d *plexVolumeDriver) loadVolumes() error {
+func (d *PlexVolumeDriver) loadVolumes() error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -79,9 +79,9 @@ func (d *plexVolumeDriver) loadVolumes() error {
 	return nil
 }
 
-func NewPlexVolumeDriver(endpoint string, store storage.Provider) *plexVolumeDriver {
+func NewPlexVolumeDriver(endpoint string, store storage.Provider) *PlexVolumeDriver {
 
-	driver := &plexVolumeDriver{
+	driver := &PlexVolumeDriver{
 		Volumes:        make(map[string]*volumeInfo),
 		mutex:          &sync.RWMutex{},
 		endpoint:       endpoint,
@@ -90,18 +90,17 @@ func NewPlexVolumeDriver(endpoint string, store storage.Provider) *plexVolumeDri
 		volumeInfoPath: "volumes.json",
 	}
 	if err := driver.loadVolumes(); err != nil {
-		logrus.WithError(err).Error("failed to load volumes")
+		log.Info("Failed to save volumes", "error", err)
 	}
 	return driver
 }
 
 // req.Name __has__ to be the server's id.
-func (d *plexVolumeDriver) Create(req *volume.CreateRequest) error {
+func (d *PlexVolumeDriver) Create(req *volume.CreateRequest) error {
 
-	logrus.WithField("name", req.Name).Info("Creating volume")
+	log.Info("Creating volume", "name", req.Name)
 
 	mountpoint := filepath.Join(d.endpoint, req.Name)
-	fmt.Printf("mountpoint: %v\n", mountpoint)
 	if err := os.MkdirAll(mountpoint, 0755); err != nil {
 		return err
 	}
@@ -119,14 +118,14 @@ func (d *plexVolumeDriver) Create(req *volume.CreateRequest) error {
 	d.mutex.Unlock()
 
 	if err := d.saveVolumes(); err != nil {
-		logrus.WithError(err).Error("failed to save volumes")
+		log.Info("Failed to save volumes", "error", err)
+		return err
 	}
 
 	return nil
 }
 
-// TODO: Alt det her skal rykkes til unmount.
-func (d *plexVolumeDriver) Remove(req *volume.RemoveRequest) error {
+func (d *PlexVolumeDriver) Remove(req *volume.RemoveRequest) error {
 
 	// Get volume
 	v, exists := d.Volumes[req.Name]
@@ -145,13 +144,14 @@ func (d *plexVolumeDriver) Remove(req *volume.RemoveRequest) error {
 	d.mutex.Unlock()
 
 	if err := d.saveVolumes(); err != nil {
-		logrus.WithError(err).Error("failed to save volumes")
+		log.Info("Failed to save volumes", "error", err)
+		return err
 	}
 
 	return nil
 }
 
-func (d *plexVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, error) {
+func (d *PlexVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -163,20 +163,23 @@ func (d *plexVolumeDriver) Path(req *volume.PathRequest) (*volume.PathResponse, 
 	return &volume.PathResponse{Mountpoint: v.Mountpoint}, nil
 }
 
-func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse, error) {
-	logrus.WithField("name", req.Name).Info("mounting driver")
+func (d *PlexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountResponse, error) {
+	log.Info("Mounting volume", "name", req.Name)
 
 	// Find volume
 	d.mutex.RLock()
 	v, exists := d.Volumes[req.Name]
 	if !exists {
-		logrus.Error("volume not found?")
+		log.Warn("Volume not found??")
 		return nil, fmt.Errorf("volume %s not found", req.Name)
 	}
 	d.mutex.RUnlock()
 
 	// Load store
-	d.loadFromStore(v)
+	err := d.loadFromStore(v)
+	if err != nil {
+		return nil, err
+	}
 
 	// Set mounted and context stuff
 	d.mutex.Lock()
@@ -189,14 +192,15 @@ func (d *plexVolumeDriver) Mount(req *volume.MountRequest) (*volume.MountRespons
 
 	// Save volumes to disk for persisency
 	if err := d.saveVolumes(); err != nil {
-		logrus.WithError(err).Error("failed to save volumes")
+		log.Error("Failed to save volumes", "error", err)
+		return nil, err
 	}
 
 	return &volume.MountResponse{Mountpoint: v.Mountpoint}, nil
 }
 
-func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
-	logrus.WithField("name", req.Name).Info("unmounting driver")
+func (d *PlexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
+	log.Info("Unmounting driver...", "name", req.Name)
 
 	d.mutex.RLock()
 	v, exists := d.Volumes[req.Name]
@@ -205,7 +209,7 @@ func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 	}
 	d.mutex.RUnlock()
 
-	fmt.Println("unmount triggered save to store")
+	log.Info("Saving volume to store", req.Name)
 	err := d.saveToStore(v)
 	if err != nil {
 		return err
@@ -217,15 +221,15 @@ func (d *plexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 	v.Mounted = false
 	d.mutex.Unlock()
 
-	// Save volumes to disk for persisency
+	// Save volumes to disk for persistency
 	if err := d.saveVolumes(); err != nil {
-		logrus.WithError(err).Error("failed to save volumes")
+		log.Error("Failed to save volumes")
 	}
 
 	return nil
 }
 
-func (d *plexVolumeDriver) Get(req *volume.GetRequest) (*volume.GetResponse, error) {
+func (d *PlexVolumeDriver) Get(req *volume.GetRequest) (*volume.GetResponse, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -242,7 +246,7 @@ func (d *plexVolumeDriver) Get(req *volume.GetRequest) (*volume.GetResponse, err
 	}, nil
 }
 
-func (d *plexVolumeDriver) List() (*volume.ListResponse, error) {
+func (d *PlexVolumeDriver) List() (*volume.ListResponse, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -256,16 +260,16 @@ func (d *plexVolumeDriver) List() (*volume.ListResponse, error) {
 	return &volume.ListResponse{Volumes: vols}, nil
 }
 
-func (d *plexVolumeDriver) Capabilities() *volume.CapabilitiesResponse {
+func (d *PlexVolumeDriver) Capabilities() *volume.CapabilitiesResponse {
 	return &volume.CapabilitiesResponse{
 		Capabilities: volume.Capability{Scope: "local"},
 	}
 }
 
-func (d *plexVolumeDriver) startPeriodicSave(ctx context.Context, volumeName string) {
+func (d *PlexVolumeDriver) startPeriodicSave(ctx context.Context, volumeName string) {
 	ticker := time.NewTicker(d.syncPeriod)
 	defer ticker.Stop()
-
+	
 	for {
 		select {
 		case <-ticker.C:
@@ -278,11 +282,15 @@ func (d *plexVolumeDriver) startPeriodicSave(ctx context.Context, volumeName str
 			}
 
 			logrus.WithField("id", v.ServerID).Info("syncing...")
+			log.Debug("Syncing volume", "id", v.ServerID)
 
-			d.saveToStore(v)
+			err := d.saveToStore(v)
+			if err != nil {
+				log.Error("Failed to sync volume periodically", "error", err)
+			}
 
 		case <-ctx.Done():
-			logrus.WithField("name", volumeName).Info("volume context ended, ending periodic save")
+			log.Info("Volume context exceeded, stopping periodic save.")
 			return
 		}
 	}

@@ -48,8 +48,8 @@ func main() {
 	})
 
 	m.HandleFunc("GET /data/{id}", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("getting...")
 		id := r.PathValue("id")
+		log.Println("INIT STORAGE->DRIVER:" + id)
 
 		f, err := os.Open(id + ".plex")
 		if err != nil {
@@ -61,12 +61,19 @@ func main() {
 
 		w.Header().Add("Content-Type", "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
-		f.WriteTo(w)
+		n, err := f.WriteTo(w)
+		if err != nil {
+			log.Default().Println(err)
+			return
+		}
+
+		log.Println("COMPLETED STORAGE->DRIVER:"+id, "\nWritten", n, "bytes.")
 	})
 
 	m.HandleFunc("PUT /data/{id}", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("receiving...")
 		id := r.PathValue("id")
+		log.Println("INIT DRIVER->STORAGE:" + id)
+
 		fn := id + ".plex"
 		tf := strconv.Itoa(rand.IntN(512)) + ".bin"
 
@@ -79,7 +86,7 @@ func main() {
 		defer outFile.Close()
 
 		// Read the incoming file data from the request body and write it to the temporary file
-		_, err = io.Copy(outFile, r.Body)
+		n, err := io.Copy(outFile, r.Body)
 		if err != nil {
 			log.Default().Println(err)
 			http.Error(w, "Failed to save file chunk", http.StatusInternalServerError)
@@ -97,7 +104,8 @@ func main() {
 
 		// Respond with success
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("File uploaded and saved successfully"))
+		_, _ = w.Write([]byte("File uploaded and saved successfully"))
+		log.Println("COMPLETED DRIVER->STORAGE:"+id, "\nReceived", n, "bytes.")
 	})
 
 	err := http.ListenAndServe(":30000", m)

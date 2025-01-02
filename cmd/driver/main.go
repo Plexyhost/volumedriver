@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
+	"github.com/charmbracelet/log"
 	"os"
 
 	"github.com/plexyhost/volume-driver/driver"
 	"github.com/plexyhost/volume-driver/storage"
 
 	"github.com/docker/go-plugins-helpers/volume"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -21,24 +21,24 @@ func main() {
 	flag.Parse()
 
 	if *endpoint == "" {
-		panic("--endpoint must be set to a compatible server")
+		log.Fatal("--endpoint must be set to a compatible server")
 	}
 
 	if err := os.MkdirAll(*directory, 0755); err != nil {
-		logrus.Fatal(err)
+		log.Fatal(err)
 	}
 
 	store, err := storage.NewHTTPStorage(*endpoint)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	d := driver.NewPlexVolumeDriver(*directory, store)
 	h := volume.NewHandler(d)
 
-	logrus.Info("Starting volume driver")
+	log.Info("Starting Plex volume driver...")
 
 	if err := h.ServeUnix(socketName, 0); err != nil {
-		logrus.Fatal(err)
+		log.Fatal("Failed to serve unix", "error", err)
 	}
 }

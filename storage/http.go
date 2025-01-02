@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -43,7 +44,7 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 		return nil
 	}
 
-	return errors.New("non-200 response from http storage provider")
+	return errors.Join(ErrNon200, fmt.Errorf("code received: %d", res.StatusCode))
 }
 
 func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
@@ -62,7 +63,7 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return ErrNon200
+		return errors.Join(ErrNon200, fmt.Errorf("code received: %d", res.StatusCode))
 	}
 
 	_, err = io.Copy(dst, res.Body)

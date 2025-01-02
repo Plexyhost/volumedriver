@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-func (d *plexVolumeDriver) saveToStore(vol *volumeInfo) error {
+func (d *PlexVolumeDriver) saveToStore(vol *volumeInfo) error {
 	buf := bytes.NewBuffer(make([]byte, 0, 1024*1024)) // Pre-allocate 1MB
 	start := time.Now()
 
@@ -36,7 +36,7 @@ func (d *plexVolumeDriver) saveToStore(vol *volumeInfo) error {
 	return nil
 }
 
-func (d *plexVolumeDriver) loadFromStore(vol *volumeInfo) error {
+func (d *PlexVolumeDriver) loadFromStore(vol *volumeInfo) error {
 	var buf bytes.Buffer
 
 	fmt.Println("loading from store")
