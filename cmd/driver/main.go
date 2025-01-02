@@ -17,7 +17,7 @@ const (
 
 func main() {
 	directory := flag.String("directory", "/live", "The folder where data from live servers are stored")
-	endpoint := flag.String("endpoint", "tcp://192.168.0.170:30000", "The server which stores and retrieves server data")
+	endpoint := flag.String("endpoint", "http://192.168.0.170:30000", "The server which stores and retrieves server data")
 	flag.Parse()
 
 	if *endpoint == "" {
@@ -28,10 +28,11 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	store, err := storage.NewTCPStorage(*endpoint)
+	store, err := storage.NewHTTPStorage(*endpoint)
 	if err != nil {
 		panic(err)
 	}
+
 	d := driver.NewPlexVolumeDriver(*directory, store)
 	h := volume.NewHandler(d)
 
