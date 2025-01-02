@@ -15,7 +15,7 @@ func Compress(src string, dst io.Writer) error {
 	zr := gzip.NewWriter(dst)
 	tw := tar.NewWriter(zr)
 
-	filepath.WalkDir(src, func(file string, e fs.DirEntry, _ error) error {
+	err := filepath.WalkDir(src, func(file string, e fs.DirEntry, _ error) error {
 		// Construct header
 		fi, err := e.Info()
 		if err != nil {
@@ -37,7 +37,7 @@ func Compress(src string, dst io.Writer) error {
 		if err := tw.WriteHeader(header); err != nil {
 			return err
 		}
-
+		
 		if !fi.IsDir() {
 			data, err := os.Open(file)
 			if err != nil {
@@ -51,6 +51,11 @@ func Compress(src string, dst io.Writer) error {
 		return nil
 	})
 
+	if err != nil {
+		return err
+	}
+
+	// Close the writer chain
 	if err := tw.Close(); err != nil {
 		return err
 	}
