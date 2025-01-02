@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"github.com/charmbracelet/log"
 	"io"
 	"net/http"
 	"net/url"
@@ -55,8 +56,8 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 
 func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	ep := hs.endpoint.JoinPath("data", id)
-	r, err := http.NewRequest("GET", "", nil)
-	r.URL = ep
+	r, err := http.NewRequest("GET", ep.String(), nil)
+	log.Info("GETTING", "ep", ep.String())
 
 	if err != nil {
 		return err
