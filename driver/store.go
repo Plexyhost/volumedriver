@@ -23,7 +23,7 @@ func (d *PlexVolumeDriver) saveToStore(vol *volumeInfo) error {
 		return err
 	}
 	end := time.Since(start)
-	log.Infof("Compressed %s in %.2f", vol.ServerID, end)
+	log.Infof("Compressed %s in %s", vol.ServerID, end)
 
 	start = time.Now()
 	err = d.store.Store(vol.ServerID, buf)
@@ -32,7 +32,7 @@ func (d *PlexVolumeDriver) saveToStore(vol *volumeInfo) error {
 		return err
 	}
 	end = time.Since(start)
-	log.Infof("Stored %s in %.2f", vol.ServerID, end)
+	log.Infof("Stored %s in %s", vol.ServerID, end)
 	return nil
 }
 
@@ -43,7 +43,7 @@ func (d *PlexVolumeDriver) loadFromStore(vol *volumeInfo) error {
 
 	err := d.store.Retrieve(vol.ServerID, &buf)
 	fmt.Printf("err: %v\n", err)
-	if errors.Is(err, os.ErrNotExist) || err == storage.ErrCacheHit {
+	if errors.Is(err, os.ErrNotExist) || errors.Is(err, storage.ErrCacheHit) {
 		return nil
 	}
 
