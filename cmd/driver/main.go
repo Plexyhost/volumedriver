@@ -28,7 +28,7 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	store, err := storage.NewHTTPStorage(*endpoint)
+	store, err := storage.NewTCPStorage(*endpoint)
 	if err != nil {
 		panic(err)
 	}
