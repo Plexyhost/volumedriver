@@ -11,16 +11,16 @@ import (
 )
 
 func (d *plexVolumeDriver) saveToStore(vol *volumeInfo) error {
-	var buf bytes.Buffer
+	buf := bytes.NewBuffer(make([]byte, 0, 1024*1024)) // Pre-allocate 1MB
 
-	err := cmp.Compress(vol.Mountpoint, &buf)
+	err := cmp.Compress(vol.Mountpoint, buf)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("compressed all")
 
-	return d.store.Store(vol.ServerID, &buf)
+	return d.store.Store(vol.ServerID, buf)
 }
 
 func (d *plexVolumeDriver) loadFromStore(vol *volumeInfo) error {
