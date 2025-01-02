@@ -67,7 +67,7 @@ func main() {
 			return
 		}
 
-		log.Println("COMPLETED STORAGE->DRIVER:"+id, "\nWritten", n, "bytes.")
+		log.Println("COMPLETED STORAGE->DRIVER:"+id, "| Written", byteCount(n), "bytes.")
 	})
 
 	m.HandleFunc("PUT /data/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -105,11 +105,25 @@ func main() {
 		// Respond with success
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("File uploaded and saved successfully"))
-		log.Println("COMPLETED DRIVER->STORAGE:"+id, "\nReceived", n, "bytes.")
+		log.Println("COMPLETED DRIVER->STORAGE:"+id, "| Received", byteCount(n), "bytes.")
 	})
 
 	err := http.ListenAndServe(":30000", m)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func byteCount(b int64) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB",
+		float64(b)/float64(div), "kMGTPE"[exp])
 }
