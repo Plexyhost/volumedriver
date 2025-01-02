@@ -7,8 +7,6 @@ all: clean rootfs create
 clean:
 	@echo "### rm ./plugin"
 	@rm -rf ./plugin
-	@docker plugin disable ${PLUGIN_NAME}
-	@docker plugin rm ${PLUGIN_NAME}
 
 rootfs:
 	@echo "### docker build rootfs image"
@@ -32,3 +30,7 @@ enable:
 push:
 	@echo "### push plugin ${PLUGIN_NAME}:${PLUGIN_TAG}"
 	@docker plugin push ${PLUGIN_NAME}:${PLUGIN_TAG}
+
+drm:
+	@docker plugin disable ${PLUGIN_NAME}
+	@docker plugin rm ${PLUGIN_NAME}
