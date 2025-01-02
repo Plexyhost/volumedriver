@@ -17,7 +17,7 @@ const (
 
 func main() {
 	directory := flag.String("directory", "/live", "The folder where data from live servers are stored")
-	endpoint := flag.String("endpoint", "http://192.168.0.170:30000/", "The server which stores and retrieves server data")
+	endpoint := flag.String("endpoint", "tcp://192.168.0.170:30000", "The server which stores and retrieves server data")
 	flag.Parse()
 
 	if *endpoint == "" {
