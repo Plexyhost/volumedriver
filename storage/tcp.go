@@ -7,6 +7,8 @@ import (
 	"io"
 	"net"
 	"net/url"
+
+	"github.com/sirupsen/logrus"
 )
 
 type tcpStorage struct {
@@ -42,6 +44,7 @@ func (ts *tcpStorage) Store(id string, src io.Reader) error {
 	}
 	res, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil || res != "OK\n" {
+		logrus.WithField("error", err).Info("couldn't store over tcp")
 		return errors.New("failed to store over TCP")
 	}
 	return nil
@@ -61,6 +64,7 @@ func (ts *tcpStorage) Retrieve(id string, dst io.Writer) error {
 	fmt.Fprintf(conn, "RETRIEVE:%s\n", id)
 	res, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil || res != "OK\n" {
+		logrus.WithField("error", err).Info("couldn't retrieve over tcp")
 		return errors.New("failed to retrieve over TCP")
 	}
 	_, err = io.Copy(dst, conn)

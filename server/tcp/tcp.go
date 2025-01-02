@@ -43,15 +43,15 @@ func handleConn(conn net.Conn) {
 	}
 	log.Println("Received command line:", cmdLine)
 	parts := strings.Split(strings.TrimSpace(cmdLine), ":")
-	fmt.Printf("len(parts): %v\n", len(parts))
-	if len(parts) == 3 && parts[0] == "STORE" {
+	if len(parts) != 2 {
+		log.Println("Wrong command format:", cmdLine)
+		return
+	}
+
+	cmd := parts[0]
+	switch cmd {
+	case "STORE":
 		id := parts[1]
-		size, err := strconv.ParseInt(parts[2], 10, 64)
-		if err != nil {
-			log.Println("Invalid file size:", err)
-			return
-		}
-		log.Println("Storing file with ID:", id, "Size:", size)
 		tf := strconv.Itoa(rand.IntN(512)) + ".bin"
 		outFile, err := os.OpenFile(tf, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
@@ -59,8 +59,8 @@ func handleConn(conn net.Conn) {
 			return
 		}
 		defer outFile.Close()
-		written, err := io.CopyN(outFile, r, size)
-		if err != nil || written != size {
+		written, err := io.Copy(outFile, r)
+		if err != nil {
 			log.Println("Error copying data:", err)
 			return
 		}
@@ -69,22 +69,25 @@ func handleConn(conn net.Conn) {
 			return
 		}
 		log.Println("File stored successfully for ID:", id)
+		log.Println("Written bytes:", written)
 		conn.Write([]byte("OK\n"))
-	} else if len(parts) == 2 {
-		switch parts[0] {
-		case "RETRIEVE":
-			id := parts[1]
-			log.Println("Retrieving file with ID:", id)
-			f, err := os.Open(id + ".plex")
-			if err != nil {
-				log.Println("Error:", err)
-				return
-			}
-			defer f.Close()
-			conn.Write([]byte("OK\n"))
-			io.Copy(conn, f)
-			log.Println("File retrieved successfully for ID:", id)
+
+	case "RETRIEVE":
+		id := parts[1]
+		log.Println("Retrieving file with ID:", id)
+		f, err := os.Open(id + ".plex")
+		if err != nil {
+			log.Println("Error:", err)
+			return
 		}
+		defer f.Close()
+		conn.Write([]byte("OK\n"))
+		n, _ := io.Copy(conn, f)
+		log.Println("File retrieved successfully for ID:", id)
+		log.Println("Bytes stored:", n)
+
+	default:
+		log.Println("Unknown event received")
 	}
 }
 
