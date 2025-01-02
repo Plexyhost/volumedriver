@@ -85,7 +85,7 @@ func NewPlexVolumeDriver(endpoint string, store storage.Provider) *PlexVolumeDri
 		Volumes:        make(map[string]*volumeInfo),
 		mutex:          &sync.RWMutex{},
 		endpoint:       endpoint,
-		syncPeriod:     2 * time.Minute,
+		syncPeriod:     4 * time.Minute,
 		store:          store,
 		volumeInfoPath: "volumes.json",
 	}
