@@ -45,7 +45,12 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 		return nil
 	}
 
-	return errors.Join(ErrNon200, fmt.Errorf("code received: %d", res.StatusCode))
+	d, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	return errors.Join(ErrNon200, fmt.Errorf("code received while storing: %d. Data: %s", res.StatusCode, string(d)))
 }
 
 func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
@@ -64,7 +69,11 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return errors.Join(ErrNon200, fmt.Errorf("code received: %d", res.StatusCode))
+		dat, err2 := io.ReadAll(res.Body)
+		if err2 != nil {
+			return err
+		}
+		return errors.Join(ErrNon200, fmt.Errorf("code received while retrieving: %d. Data: %s", res.StatusCode, string(dat)))
 	}
 
 	_, err = io.Copy(dst, res.Body)
