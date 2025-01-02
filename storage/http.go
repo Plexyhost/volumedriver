@@ -13,7 +13,7 @@ type httpStorage struct {
 	// checksums is a map that points any server id to the sum
 }
 
-func NewHTTPStorage(endpoint string) (StorageProvider, error) {
+func NewHTTPStorage(endpoint string) (Provider, error) {
 	ep, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err

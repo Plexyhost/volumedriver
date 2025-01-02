@@ -15,7 +15,7 @@ type tcpStorage struct {
 	endpoint *url.URL
 }
 
-func NewTCPStorage(endpoint string) (StorageProvider, error) {
+func NewTCPStorage(endpoint string) (Provider, error) {
 	ep, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,6 @@ func (ts *tcpStorage) Retrieve(id string, dst io.Writer) error {
 		return err
 	}
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		tcpConn.SetNoDelay(true)
 		tcpConn.SetReadBuffer(65536)
 		tcpConn.SetWriteBuffer(65536)
 	}

@@ -33,7 +33,7 @@ type plexVolumeDriver struct {
 	mutex          *sync.RWMutex
 	endpoint       string
 	syncPeriod     time.Duration
-	store          storage.StorageProvider
+	store          storage.Provider
 	volumeInfoPath string
 }
 
@@ -79,7 +79,7 @@ func (d *plexVolumeDriver) loadVolumes() error {
 	return nil
 }
 
-func NewPlexVolumeDriver(endpoint string, store storage.StorageProvider) *plexVolumeDriver {
+func NewPlexVolumeDriver(endpoint string, store storage.Provider) *plexVolumeDriver {
 
 	driver := &plexVolumeDriver{
 		Volumes:        make(map[string]*volumeInfo),

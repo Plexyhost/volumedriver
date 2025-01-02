@@ -11,7 +11,7 @@ type fsStorage struct {
 	suffix string
 }
 
-func NewFSStorage(root string) StorageProvider {
+func NewFSStorage(root string) Provider {
 	os.MkdirAll(root, os.ModeDir)
 
 	if !strings.HasSuffix(root, "/") {
