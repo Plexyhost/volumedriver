@@ -207,6 +207,7 @@ func (d *PlexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 	if !exists {
 		return fmt.Errorf("volume %s not found", req.Name)
 	}
+	v.cancel()
 	d.mutex.RUnlock()
 
 	log.Info("Saving volume to store", req.Name)
@@ -217,7 +218,6 @@ func (d *PlexVolumeDriver) Unmount(req *volume.UnmountRequest) error {
 
 	// Cancel context and set mounted to false
 	d.mutex.Lock()
-	v.cancel()
 	v.Mounted = false
 	d.mutex.Unlock()
 
@@ -269,7 +269,7 @@ func (d *PlexVolumeDriver) Capabilities() *volume.CapabilitiesResponse {
 func (d *PlexVolumeDriver) startPeriodicSave(ctx context.Context, volumeName string) {
 	ticker := time.NewTicker(d.syncPeriod)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
