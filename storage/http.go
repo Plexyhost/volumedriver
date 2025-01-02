@@ -29,6 +29,7 @@ func NewHTTPStorage(endpoint string) (Provider, error) {
 func (hs *httpStorage) Store(id string, src io.Reader) error {
 	ep := hs.endpoint.JoinPath("data", id)
 	r, err := http.NewRequest("PUT", "", src)
+	r.Header.Add("Content-Type", "binary/octet-stream")
 	r.URL = ep
 	if err != nil {
 		return err

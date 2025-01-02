@@ -59,7 +59,7 @@ func main() {
 		}
 		defer f.Close()
 
-		w.Header().Add("Content-Type", "application/octet-stream")
+		w.Header().Add("Content-Type", "binary/octet-stream")
 		w.WriteHeader(http.StatusOK)
 		n, err := f.WriteTo(w)
 		if err != nil {
