@@ -25,7 +25,6 @@ func NewHTTPStorage(endpoint string) (Provider, error) {
 	}, nil
 }
 
-// Must return
 func (hs *httpStorage) Store(id string, src io.Reader) error {
 	ep := hs.endpoint.JoinPath("data", id)
 	r, err := http.NewRequest("PUT", "", src)
