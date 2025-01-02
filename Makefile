@@ -3,9 +3,12 @@ PLUGIN_TAG=latest
 
 all: clean rootfs create
 
+
 clean:
 	@echo "### rm ./plugin"
 	@rm -rf ./plugin
+	@docker plugin disable ${PLUGIN_NAME}
+	@docker plugin rm ${PLUGIN_NAME}
 
 rootfs:
 	@echo "### docker build rootfs image"
