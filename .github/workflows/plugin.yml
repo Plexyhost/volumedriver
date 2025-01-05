@@ -1,4 +1,4 @@
-name: 'Build Storage Server'
+name: 'Build Docker Plugin'
 env:
   PLUGIN_NAME: 'plexhost-driver'
 
