@@ -288,7 +288,7 @@ func (d *PlexVolumeDriver) startPeriodicSave(ctx context.Context, volumeName str
 			}
 
 		case <-ctx.Done():
-			log.Info("Volume context exceeded, stopping periodic save.")
+			log.Info("Volume context exceeded, stopping periodic save", "volume", volumeName)
 			return
 		}
 	}
