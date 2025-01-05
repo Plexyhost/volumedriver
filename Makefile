@@ -10,7 +10,7 @@ clean:
 
 rootfs:
 	@echo "### docker build rootfs image"
-	@docker build -t ${PLUGIN_NAME}:rootfs -f .docker/Dockerfile.plugin .
+	@docker build -t ${PLUGIN_NAME}:rootfs -f .docker/plugin.Dockerfile .
 	@echo "### create rootfs directory"
 	@mkdir -p ./plugin/rootfs
 	@docker create --name tmp ${PLUGIN_NAME}:rootfs
