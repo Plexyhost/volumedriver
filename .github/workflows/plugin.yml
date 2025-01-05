@@ -47,4 +47,4 @@ jobs:
         run: docker plugin create ghcr.io/plexyhost/${{env.PLUGIN_NAME}}:latest ./plugin
 
       - name: Push Plugin
-        run: docker push ghcr.io/plexyhost/${{env.PLUGIN_NAME}}:latest
+        run: docker plugin push ghcr.io/plexyhost/${{env.PLUGIN_NAME}}:latest
