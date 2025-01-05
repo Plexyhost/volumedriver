@@ -35,7 +35,13 @@ jobs:
         run: echo "TAG_NAME=latest" >> $GITHUB_ENV
 
       - name: Build rootfs
-        run: make rootfs
+        run: |
+          docker build -t ${{env.PLUGIN_NAME}}:rootfs -f .docker/plugin.Dockerfile .
+          mkdir -p ./plugin/rootfs
+          docker create --name tmp ${{env.PLUGIN_NAME}}:rootfs
+          docker export tmp | tar -x -C ./plugin/rootfs
+          cp config.json ./plugin/
+          docker rm -vf tmp
 
       - name: Create Plugin
         run: docker plugin create ghcr.io/plexyhost/${{env.PLUGIN_NAME}}:latest ./plugin
