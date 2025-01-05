@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -30,6 +31,11 @@ func main() {
 
 		f, err := os.Open(id + ".plex")
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				log.Println("not foundd")
+				http.Error(w, "File not found", http.StatusNotFound)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -53,8 +59,7 @@ func main() {
 
 		f, err := os.Open(id + ".plex")
 		if err != nil {
-			log.Default().Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
 		defer f.Close()
