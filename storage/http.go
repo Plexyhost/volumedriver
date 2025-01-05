@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -101,7 +102,7 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	if res.StatusCode != 200 {
 		if res.StatusCode == 404 {
 			log.Info("Status 404, ignoring...")
-			return nil
+			return os.ErrNotExist
 		}
 		dat, err2 := io.ReadAll(res.Body)
 		if err2 != nil {
