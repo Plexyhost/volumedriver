@@ -36,6 +36,7 @@ func main() {
 				http.Error(w, "File not found", http.StatusNotFound)
 				return
 			}
+			log.Println("FAILED DRIVER->STORAGE:"+id, "ERROR: "+err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -43,7 +44,7 @@ func main() {
 
 		hash := sha256.New()
 		if _, err := f.WriteTo(hash); err != nil {
-			log.Default().Println(err)
+			log.Println("FAILED DRIVER->STORAGE:"+id, "ERROR: "+err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -72,7 +73,7 @@ func main() {
 			return
 		}
 
-		log.Println("COMPLETED STORAGE->DRIVER:"+id, "| Written", byteCount(n), "bytes.")
+		log.Println("COMPLETED STORAGE->DRIVER:"+id, "| Written", byteCount(n))
 	})
 
 	m.HandleFunc("PUT /data/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +111,7 @@ func main() {
 		// Respond with success
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("File uploaded and saved successfully"))
-		log.Println("COMPLETED DRIVER->STORAGE:"+id, "| Received", byteCount(n), "bytes.")
+		log.Println("COMPLETED DRIVER->STORAGE:"+id, "| Received", byteCount(n))
 	})
 
 	err := http.ListenAndServe(":30000", m)
