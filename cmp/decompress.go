@@ -11,6 +11,7 @@ import (
 )
 
 func Decompress(src io.Reader, dst string) error {
+
 	// Reader chain
 	// src -> gzip -> tar
 	// gr, err := gzip.NewReader(src)
@@ -21,6 +22,11 @@ func Decompress(src io.Reader, dst string) error {
 	defer gr.Close()
 
 	tr := tar.NewReader(gr)
+
+	// Clear directory
+	if err := os.RemoveAll(dst); err != nil {
+		return err
+	}
 
 	for {
 		header, err := tr.Next()

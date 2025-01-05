@@ -42,9 +42,9 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 	hs.mu.Lock()
 	defer hs.mu.Unlock()
 	if lastFetch, ok := hs.lastRetrieve[id]; ok {
-		if since := time.Since(lastFetch); since < 3*time.Second {
+		if since := time.Since(lastFetch); since < 10*time.Second {
 			log.Warn("Determining no changes since lastFetch", "since", since)
-			return nil
+			return ErrCacheHit
 		}
 	}
 
@@ -77,9 +77,9 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	hs.mu.Lock()
 	defer hs.mu.Unlock()
 	if lastFetch, ok := hs.lastRetrieve[id]; ok {
-		if since := time.Since(lastFetch); since < 3*time.Second {
+		if since := time.Since(lastFetch); since < 10*time.Second {
 			log.Warn("Determining no changes since lastFetch", "since", since)
-			return nil
+			return ErrCacheHit
 		}
 	}
 
