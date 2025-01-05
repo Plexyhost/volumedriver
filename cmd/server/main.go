@@ -81,7 +81,7 @@ func main() {
 		// Respond with success
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("File uploaded and saved successfully"))
-		log.Info("COMPLETED DRIVER->STORAGE", "id", id, "bytes_written", byteCount(n))
+		log.Info("COMPLETED DRIVER->STORAGE", "id", id, "bytes_read", byteCount(n))
 	})
 
 	err := http.ListenAndServe(":3000", m)
@@ -100,6 +100,6 @@ func byteCount(b int64) string {
 		div *= unit
 		exp++
 	}
-	return fmt.Sprintf("%.1f %cB",
+	return fmt.Sprintf("%.1f%cB",
 		float64(b)/float64(div), "kMGTPE"[exp])
 }
