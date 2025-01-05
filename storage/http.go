@@ -13,10 +13,10 @@ import (
 )
 
 type httpStorage struct {
-	cl        *http.Client
-	endpoint  *url.URL
-	lastFetch map[string]time.Time
-	mu        *sync.Mutex
+	cl           *http.Client
+	endpoint     *url.URL
+	lastRetrieve map[string]time.Time
+	mu           *sync.Mutex
 	// checksums is a map that points any server id to the sum
 }
 
@@ -27,14 +27,27 @@ func NewHTTPStorage(endpoint string) (Provider, error) {
 	}
 
 	return &httpStorage{
-		cl:        &http.Client{},
-		endpoint:  ep,
-		lastFetch: make(map[string]time.Time),
-		mu:        &sync.Mutex{},
+		cl:           &http.Client{},
+		endpoint:     ep,
+		lastRetrieve: make(map[string]time.Time),
+		mu:           &sync.Mutex{},
 	}, nil
 }
 
 func (hs *httpStorage) Store(id string, src io.Reader) error {
+
+	// Tror simpelthen ikke der ka ske nogle ændringer på 3 sekunder...
+	// så vi antager der ikke er, for at skippe den Docker
+	// fejl hvor, når man mounter trigger den et mount, unmount og så igen et mount :)
+	hs.mu.Lock()
+	defer hs.mu.Unlock()
+	if lastFetch, ok := hs.lastRetrieve[id]; ok {
+		if since := time.Since(lastFetch); since < 3*time.Second {
+			log.Warn("Determining no changes since lastFetch", "since", since)
+			return nil
+		}
+	}
+
 	ep := hs.endpoint.JoinPath("data", id)
 	r, err := http.NewRequest("PUT", ep.String(), src)
 	if err != nil {
@@ -63,8 +76,8 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	hs.mu.Lock()
 	defer hs.mu.Unlock()
-	if lastFetch, ok := hs.lastFetch[id]; ok {
-		if since := time.Since(lastFetch); since < 5*time.Second {
+	if lastFetch, ok := hs.lastRetrieve[id]; ok {
+		if since := time.Since(lastFetch); since < 3*time.Second {
 			log.Warn("Determining no changes since lastFetch", "since", since)
 			return nil
 		}
@@ -97,7 +110,7 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 		return errors.Join(ErrNon200, fmt.Errorf("code received while retrieving: %d. Data: %s", res.StatusCode, string(dat)))
 	}
 
-	hs.lastFetch[id] = time.Now()
+	hs.lastRetrieve[id] = time.Now()
 
 	_, err = io.Copy(dst, res.Body)
 	if err != nil {
