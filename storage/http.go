@@ -61,6 +61,15 @@ func (hs *httpStorage) Store(id string, src io.Reader) error {
 }
 
 func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
+	hs.mu.Lock()
+	defer hs.mu.Unlock()
+	if lastFetch, ok := hs.lastFetch[id]; ok {
+		if since := time.Since(lastFetch); since < 5*time.Second {
+			log.Warn("Determining no changes since lastFetch", "since", since)
+			return nil
+		}
+	}
+
 	ep := hs.endpoint.JoinPath("data", id)
 	r, err := http.NewRequest("GET", ep.String(), nil)
 	log.Info("GETTING", "ep", ep.String())
@@ -70,14 +79,6 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	}
 
 	res, err := hs.cl.Do(r)
-	hs.mu.Lock()
-	defer hs.mu.Unlock()
-	if lastFetch, ok := hs.lastFetch[id]; ok {
-		if since := time.Since(lastFetch); since < 5*time.Second {
-			log.Warn("Determining no changes since lastFetch", "since", since)
-			return nil
-		}
-	}
 
 	if err != nil {
 		return err
