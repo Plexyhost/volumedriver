@@ -3,10 +3,11 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"github.com/charmbracelet/log"
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/charmbracelet/log"
 )
 
 type httpStorage struct {
@@ -69,6 +70,9 @@ func (hs *httpStorage) Retrieve(id string, dst io.Writer) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
+		if res.StatusCode == 404 {
+			return nil
+		}
 		dat, err2 := io.ReadAll(res.Body)
 		if err2 != nil {
 			return err
