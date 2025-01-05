@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   containerize:
-    runs-on: blacksmith-2vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
