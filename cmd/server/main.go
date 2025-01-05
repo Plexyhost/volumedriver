@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/charmbracelet/log"
 )
@@ -27,6 +28,7 @@ func main() {
 	m.HandleFunc("GET /data/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		log.Info("INIT STORAGE->DRIVER", "id", id)
+		start := time.Now()
 
 		f, err := os.Open(id + ".plex")
 		if err != nil {
@@ -43,12 +45,13 @@ func main() {
 			return
 		}
 
-		log.Info("COMPLETED STORAGE->DRIVER", "id", id, "bytes_written", byteCount(n))
+		log.Info("COMPLETED STORAGE->DRIVER", "id", id, "bytes_written", byteCount(n), "took", time.Since(start))
 	})
 
 	m.HandleFunc("PUT /data/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		log.Info("INIT DRIVER->STORAGE", "id", id)
+		start := time.Now()
 
 		fn := id + ".plex"
 		tf := strconv.Itoa(rand.IntN(512)) + ".bin"
@@ -81,7 +84,7 @@ func main() {
 		// Respond with success
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("File uploaded and saved successfully"))
-		log.Info("COMPLETED DRIVER->STORAGE", "id", id, "bytes_read", byteCount(n))
+		log.Info("COMPLETED DRIVER->STORAGE", "id", id, "bytes_read", byteCount(n), "took", time.Since(start))
 	})
 
 	err := http.ListenAndServe(":3000", m)
