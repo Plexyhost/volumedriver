@@ -2,17 +2,19 @@ package cmp
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 func Compress(src string, dst io.Writer) error {
 	// Writer chain
 	// tar -> gzip -> dst
-	zr := gzip.NewWriter(dst)
+	// zr := gzip.NewWriter(dst)
+	zr, _ := zstd.NewWriter(dst)
 	tw := tar.NewWriter(zr)
 
 	err := filepath.WalkDir(src, func(file string, e fs.DirEntry, _ error) error {
@@ -37,7 +39,7 @@ func Compress(src string, dst io.Writer) error {
 		if err := tw.WriteHeader(header); err != nil {
 			return err
 		}
-		
+
 		if !fi.IsDir() {
 			data, err := os.Open(file)
 			if err != nil {

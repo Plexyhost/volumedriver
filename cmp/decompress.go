@@ -2,17 +2,19 @@ package cmp
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 func Decompress(src io.Reader, dst string) error {
 	// Reader chain
 	// src -> gzip -> tar
-	gr, err := gzip.NewReader(src)
+	// gr, err := gzip.NewReader(src)
+	gr, err := zstd.NewReader(src)
 	if err != nil {
 		return err
 	}
