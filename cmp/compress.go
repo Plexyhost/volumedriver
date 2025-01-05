@@ -28,12 +28,18 @@ func Compress(src string, dst io.Writer) error {
 		if err != nil {
 			return err
 		}
+
 		// Make the header name relative to the src directory
 		header.Name, err = filepath.Rel(src, file)
 		if err != nil {
 			return err
 		}
 		header.Name = filepath.ToSlash(header.Name)
+
+		// Ignore world/session.lock
+		if header.Name == "world/session.lock" {
+			return nil
+		}
 
 		// Write header through writer chain
 		if err := tw.WriteHeader(header); err != nil {
