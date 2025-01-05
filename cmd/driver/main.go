@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
-	"github.com/charmbracelet/log"
+	"net/url"
 	"os"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/plexyhost/volume-driver/driver"
 	"github.com/plexyhost/volume-driver/storage"
@@ -17,18 +19,22 @@ const (
 
 func main() {
 	directory := flag.String("directory", "/live", "The folder where data from live servers are stored")
-	endpoint := flag.String("endpoint", "http://192.168.0.170:30000", "The server which stores and retrieves server data")
 	flag.Parse()
 
-	if *endpoint == "" {
-		log.Fatal("--endpoint must be set to a compatible server")
+	endpoint := os.Getenv("ENDPOINT")
+	if endpoint == "" {
+		log.Fatal("endpoint cannot be empty")
 	}
 
 	if err := os.MkdirAll(*directory, 0755); err != nil {
 		log.Fatal(err)
 	}
 
-	store, err := storage.NewHTTPStorage(*endpoint)
+	if _, err := url.ParseRequestURI(endpoint); err != nil {
+		log.Fatal(err)
+	}
+
+	store, err := storage.NewHTTPStorage(endpoint)
 	if err != nil {
 		log.Fatal(err)
 	}

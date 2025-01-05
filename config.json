@@ -20,5 +20,13 @@
   ],
   "linux": {
     "capabilities": ["CAP_SYS_ADMIN"]
-  }
+  },
+  "Env": [
+    {
+      "Name": "ENDPOINT",
+      "Description": "Server endpoint",
+      "Value": "http://localhost:3000/",
+      "Settable": ["value"]
+    }
+  ]
 }
