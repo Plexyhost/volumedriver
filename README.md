@@ -1,55 +1,54 @@
-# volumedriver
+# PlexHost Volume Driver
 
-# Using this plugin with Docker Swarm via Go SDK
+A Docker volume plugin that enables persistent storage synchronization for PlexHost Server containers.
 
-1. Make sure the plugin is installed and enabled on all Swarm nodes:
-   ```bash
-   docker plugin install barealek/plexhost-driver:latest
-   docker plugin enable barealek/plexhost-driver:latest
-   ```
-2. Use the Go Docker SDK to create a service. Below is a minimal snippet:
-   ```go
-   package main
+## Features
 
-   import (
-       "context"
-       "fmt"
+- Automatic synchronization of PlexHost server data
+- Periodic background saves (every 4 minutes)
+- HTTP-based storage backend
+- Docker plugin interface
 
-       "github.com/docker/docker/api/types"
-       "github.com/docker/docker/api/types/mount"
-       "github.com/docker/docker/api/types/swarm"
-       "github.com/docker/docker/client"
-   )
+## Installation
 
-   func main() {
-       cli, err := client.NewClientWithOpts(client.FromEnv)
-       // ...existing code...
-       serviceSpec := swarm.ServiceSpec{
-           // ...existing code...
-           TaskTemplate: swarm.TaskSpec{
-               ContainerSpec: swarm.ContainerSpec{
-                   Image: "busybox",
-                   Command: []string{"sleep", "3600"},
-                   Mounts: []mount.Mount{
-                       {
-                           Type:   mount.TypeVolume,
-                           Source: "my_volume",
-                           Target: "/data",
-                           VolumeOptions: &mount.VolumeOptions{
-                               DriverConfig: &mount.Driver{
-                                   Name: "barealek/plexhost-driver:latest",
-                               },
-                           },
-                       },
-                   },
-               },
-           },
-       }
+Install the plugin from GitHub Container Registry:
 
-       resp, err := cli.ServiceCreate(context.Background(), serviceSpec, types.ServiceCreateOptions{})
-       if err != nil {
-           panic(err)
-       }
-       fmt.Printf("Created service: %v\n", resp.ID)
-   }
-   ```
+```bash
+docker plugin install ghcr.io/plexyhost/plexhost-driver:latest \
+  --grant-all-permissions \
+  ENDPOINT=http://example-storage-server
+```
+
+## Usage
+
+Servers orchestrated by our backend will look for the plugin. It will automatically be used when deploying.
+
+## Configuration
+
+The plugin accepts the following environment variables:
+
+- `ENDPOINT`: URL of your storage server (required)
+
+## Architecture
+
+The system consists of two main components:
+
+1. **Volume Driver**: Implements Docker's volume plugin interface
+2. **Storage Server**: HTTP server that handles data persistence
+
+Data is automatically compressed via the z-standard algorithm before being sent to storage, and decompressed when retrieved.
+
+## Building from Source
+
+1. Clone the repository
+2. Build the plugin:
+
+```bash
+make clean rootfs create
+```
+
+3. Enable the plugin:
+
+```bash
+make enable
+```
