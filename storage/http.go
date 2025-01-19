@@ -37,9 +37,9 @@ func NewHTTPStorage(endpoint string) (Provider, error) {
 
 func (hs *httpStorage) Store(id string, src io.Reader) error {
 
-	// Tror simpelthen ikke der ka ske nogle ændringer på 3 sekunder...
+	// Tror simpelthen ikke der ka ske nogle væsentlige ændringer på 3 sekunder...
 	// så vi antager der ikke er, for at skippe den Docker
-	// fejl hvor, når man mounter trigger den et mount, unmount og så igen et mount :)
+	// fejl, hvor når man mounter trigger den et mount, unmount og så igen et mount :)
 	hs.mu.Lock()
 	defer hs.mu.Unlock()
 	if lastFetch, ok := hs.lastRetrieve[id]; ok {

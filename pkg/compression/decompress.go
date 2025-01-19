@@ -1,4 +1,4 @@
-package cmp
+package compression
 
 import (
 	"archive/tar"

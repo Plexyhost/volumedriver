@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/plexyhost/volume-driver/cmp"
+	"github.com/plexyhost/volume-driver/pkg/compression"
 	"github.com/plexyhost/volume-driver/storage"
 
 	"github.com/charmbracelet/log"
@@ -17,13 +17,12 @@ func (d *PlexVolumeDriver) saveToStore(vol *volumeInfo) error {
 	buf := bytes.NewBuffer(make([]byte, 0, 1024*1024)) // Pre-allocate 1MB
 	start := time.Now()
 
-	err := cmp.Compress(vol.Mountpoint, buf)
+	err := compression.Compress(vol.Mountpoint, buf)
 	if err != nil {
 		log.Errorf("Error while compressing %s: %s", vol.ServerID, err)
 		return err
 	}
-	end := time.Since(start)
-	log.Infof("Compressed %s in %s", vol.ServerID, end)
+	log.Infof("Compressed %s in %s", vol.ServerID, time.Since(start))
 
 	start = time.Now()
 	err = d.store.Store(vol.ServerID, buf)
@@ -31,8 +30,7 @@ func (d *PlexVolumeDriver) saveToStore(vol *volumeInfo) error {
 		log.Errorf("Error while storing %s: %s", vol.ServerID, err)
 		return err
 	}
-	end = time.Since(start)
-	log.Infof("Stored %s in %s", vol.ServerID, end)
+	log.Infof("Stored %s in %s", vol.ServerID, time.Since(start))
 	return nil
 }
 
@@ -51,5 +49,5 @@ func (d *PlexVolumeDriver) loadFromStore(vol *volumeInfo) error {
 		return err
 	}
 
-	return cmp.Decompress(&buf, vol.Mountpoint)
+	return compression.Decompress(&buf, vol.Mountpoint)
 }
